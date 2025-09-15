@@ -1069,8 +1069,25 @@ public class Interpreter {
 	 */
 	public void run()
 		throws InterpreterException, IOException {
-		init( new jolie.State(), new CompletableFuture<>() );
-		runCode();
+
+		CompletableFuture< Exception > f = new CompletableFuture<>();
+		Thread starterThread = new StarterThread( f );
+		starterThread.start();
+		try {
+			Exception e = f.get();
+			if( e instanceof InterpreterException )
+				throw (InterpreterException) e;
+			else if( e instanceof IOException )
+				throw (IOException) e;
+		} catch( InterruptedException | ExecutionException e ) {
+			throw new InterpreterException( e );
+		}
+
+		try {
+			starterThread.join();
+		} catch( InterruptedException e ) {
+			throw new InterpreterException( e );
+		}
 	}
 
 	private final ExecutorService nativeExecutorService =
