@@ -114,6 +114,9 @@ public class Scanner implements AutoCloseable {
 		RUN,				///< run
 		UNDEF,				///< undef
 		PRINT,				///< print
+		SELECT,				///< select
+		INTO,				///< into
+		WHERE,				///< where
 		HASH,				///< #
 		DOLLAR,				///< $
 		PERCENT_SIGN,		///< %
@@ -183,6 +186,9 @@ public class Scanner implements AutoCloseable {
 		UNRESERVED_KEYWORDS.put( "constants", TokenType.CONSTANTS );
 		UNRESERVED_KEYWORDS.put( "undef", TokenType.UNDEF );
 		UNRESERVED_KEYWORDS.put( "print", TokenType.PRINT );
+		UNRESERVED_KEYWORDS.put( "select", TokenType.SELECT );
+		UNRESERVED_KEYWORDS.put( "into", TokenType.INTO );
+		UNRESERVED_KEYWORDS.put( "where", TokenType.WHERE );
 		UNRESERVED_KEYWORDS.put( "for", TokenType.FOR );
 		UNRESERVED_KEYWORDS.put( "foreach", TokenType.FOREACH );
 		UNRESERVED_KEYWORDS.put( "is_defined", TokenType.IS_DEFINED );

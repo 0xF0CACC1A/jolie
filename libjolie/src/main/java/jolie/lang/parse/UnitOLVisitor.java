@@ -79,6 +79,7 @@ import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
 import jolie.lang.parse.ast.PrintStatement;
+import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -475,6 +476,14 @@ public interface UnitOLVisitor extends OLVisitor< Unit, Unit > {
 
 	@Override
 	default Unit visit( PrintStatement n, Unit ctx ) {
+		visit( n );
+		return Unit.INSTANCE;
+	}
+
+	void visit( SelectStatement n );
+
+	@Override
+	default Unit visit( SelectStatement n, Unit ctx ) {
 		visit( n );
 		return Unit.INSTANCE;
 	}

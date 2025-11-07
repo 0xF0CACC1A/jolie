@@ -101,6 +101,7 @@ import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
 import jolie.lang.parse.ast.PrintStatement;
+import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -1208,6 +1209,13 @@ public class SemanticVerifier implements UnitOLVisitor {
 	@Override
 	public void visit( PrintStatement n ) {
 		n.expression().accept( this );
+	}
+
+	@Override
+	public void visit( SelectStatement n ) {
+		// Queries are strings, just visit variable paths
+		n.intoVariable().accept( this );
+		n.fromVariable().accept( this );
 	}
 
 

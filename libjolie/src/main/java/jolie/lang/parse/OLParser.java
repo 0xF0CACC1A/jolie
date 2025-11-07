@@ -111,6 +111,7 @@ import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
 import jolie.lang.parse.ast.PrintStatement;
+import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.VariablePathNode.Type;
@@ -2510,6 +2511,21 @@ public class OLParser extends AbstractParser {
 			nextToken();
 			retVal =
 				new PrintStatement( getContext(), parseExpression() );
+			break;
+		case SELECT:
+			nextToken();
+			assertToken( Scanner.TokenType.STRING, "expected SELECT query string" );
+			String selectQuery = token.content().replaceAll( "\"", "" );
+			nextToken();
+			eat( Scanner.TokenType.INTO, "expected INTO after SELECT expression" );
+			VariablePathNode intoVar = parseVariablePath();
+			eat( Scanner.TokenType.FROM, "expected FROM after INTO variable" );
+			VariablePathNode fromVar = parseVariablePath();
+			eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
+			assertToken( Scanner.TokenType.STRING, "expected WHERE query string" );
+			String whereQuery = token.content().replaceAll( "\"", "" );
+			nextToken();
+			retVal = new SelectStatement( getContext(), selectQuery, intoVar, fromVar, whereQuery );
 			break;
 		case SYNCHRONIZED:
 			nextToken();
