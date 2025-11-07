@@ -1,0 +1,15 @@
+// Test: Nested Navigation with Child Field Filter
+// Expected: data[1].a (where .b==5)
+
+main {
+    data[0].a.b = 6;
+    data[1].a.b = 5;
+
+    select "$[*].a" into results from data where ".b == 5";
+
+    i = 0;
+    while( i < #results ) {
+        print results[i];
+        i++
+    }
+}

@@ -153,8 +153,10 @@ ANTLR plugin runs during compilation, generating parser classes in `libjolie/tar
 When executing Jolie programs with SELECT, ANTLR runtime JAR must be on classpath:
 
 ```bash
-java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes:libjolie/target/generated-sources/antlr4:~/.m2/repository/org/antlr/antlr4-runtime/4.13.1/antlr4-runtime-4.13.1.jar" jolie.Jolie program.ol
+java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes:libjolie/target/generated-sources/antlr4:test/select/antlr4-runtime-4.13.1.jar" jolie.Jolie program.ol
 ```
+
+**Note**: The ANTLR runtime JAR is included in `test/select/antlr4-runtime-4.13.1.jar` for convenience.
 
 ## Key Architectural Decisions
 
@@ -223,3 +225,32 @@ Required because all classes implementing `UnitOLVisitor` must provide the metho
 **Semantic Analysis**: Query strings bypass normal expression validation
 
 **Type System**: No compile-time type checking for query syntax (validated at runtime)
+
+## Test Coverage
+
+Tests located in `test/select/` verify the following features:
+
+**SELECT clause navigation:**
+- `$.*` - wildcard navigation
+- `$[*]` - array iteration
+- `$..field` - descendant search
+- `$.field`, `$[*].field` - direct navigation
+- `$[*]..projects[*].status` - composed descendant with field navigation
+
+**WHERE clause conditions:**
+- `.field == value` - direct field value check
+- `.a.b.c == value` - nested path value check
+- `..field[*] == value` - descendant array search
+- `.field in .` - field existence check
+- `.a.b.c in .` - nested path existence check
+
+**Boolean operators:**
+- `&&` - AND operator
+- `||` - OR operator
+- `!` - NOT operator
+- `()` - parentheses for precedence
+
+**Run tests:**
+```bash
+cd test/select && python3 run_tests.py
+```

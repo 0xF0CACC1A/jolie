@@ -2,6 +2,7 @@ package jolie.process;
 
 import jolie.ExecutionThread;
 import jolie.runtime.Value;
+import jolie.runtime.ValueVector;
 import jolie.runtime.VariablePath;
 import jolie.runtime.select.SelectQueryExecutor;
 import java.util.List;
@@ -34,11 +35,12 @@ public class SelectProcess implements Process {
 		if( ExecutionThread.currentThread().isKilled() )
 			return;
 
-		Value fromValue = fromVariable.getValue();
 		String rootPath = extractRootPath( fromVariable );
+		ValueVector vec = fromVariable.getValueVector();
+		Object source = vec.size() > 1 ? vec : vec.first();
 
 		List< String > matchingPaths = SelectQueryExecutor.execute(
-			fromValue,
+			source,
 			selectQuery,
 			whereQuery,
 			rootPath );

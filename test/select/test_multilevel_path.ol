@@ -1,0 +1,16 @@
+// Test: Multi-Level Path Traversal
+// Expected: accounts[0] (.user.settings.theme==dark)
+
+main {
+    accounts[0].user.settings.theme = "dark";
+    accounts[1].user.settings.theme = "light";
+    accounts[2].user.settings.language = "en";
+
+    select "$[*]" into results from accounts where ".user.settings.theme == dark";
+
+    i = 0;
+    while( i < #results ) {
+        print results[i];
+        i++
+    }
+}
