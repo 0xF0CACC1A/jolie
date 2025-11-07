@@ -1711,7 +1711,7 @@ public class OOITBuilder implements UnitOLVisitor {
 
 	@Override
 	public void visit( PrintStatement n ) {
-		currProcess = new PrintProcess();
+		currProcess = new PrintProcess( buildExpression( n.expression() ) );
 	}
 
 	@Override

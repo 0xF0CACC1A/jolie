@@ -4,8 +4,15 @@ import jolie.lang.parse.OLVisitor;
 import jolie.lang.parse.context.ParsingContext;
 
 public class PrintStatement extends OLSyntaxNode {
-	public PrintStatement( ParsingContext context ) {
+	private final OLSyntaxNode expression;
+
+	public PrintStatement( ParsingContext context, OLSyntaxNode expression ) {
 		super( context );
+		this.expression = expression;
+	}
+
+	public OLSyntaxNode expression() {
+		return expression;
 	}
 
 	@Override

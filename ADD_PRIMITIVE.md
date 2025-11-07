@@ -1,15 +1,18 @@
-# Adding a Simple Primitive to Jolie
+# Adding Primitives to Jolie
 
-This guide explains how to add a simple primitive statement to the Jolie language that takes **no arguments**, similar to `nullProcess`.
+This guide explains how to add primitive statements to the Jolie language, with or without arguments.
 
-## Example: Adding the `print` Primitive
+## Example: The `print` Primitive
 
-We created a `print` primitive that outputs "hello" when executed.
+We created a `print` primitive that evaluates an expression and outputs it to stdout.
 
 Usage in Jolie code:
 ```jolie
 main {
-    print
+    a = 5;
+    print a                    // Output: 5
+    print "hello world"        // Output: hello world
+    print 10 + 20             // Output: 30
 }
 ```
 
@@ -55,8 +58,15 @@ import jolie.lang.parse.OLVisitor;
 import jolie.lang.parse.context.ParsingContext;
 
 public class PrintStatement extends OLSyntaxNode {
-    public PrintStatement( ParsingContext context ) {
+    private final OLSyntaxNode expression;
+
+    public PrintStatement( ParsingContext context, OLSyntaxNode expression ) {
         super( context );
+        this.expression = expression;
+    }
+
+    public OLSyntaxNode expression() {
+        return expression;
     }
 
     @Override
@@ -78,7 +88,7 @@ Add parsing case in `parseBasicStatement()`:
 ```java
 case PRINT:
     nextToken();
-    retVal = new PrintStatement( getContext() );
+    retVal = new PrintStatement( getContext(), parseExpression() );
     break;
 ```
 
@@ -123,13 +133,19 @@ Location: `jolie/src/main/java/jolie/process/PrintProcess.java`
 package jolie.process;
 
 import jolie.ExecutionThread;
+import jolie.runtime.Value;
+import jolie.runtime.expression.Expression;
 
 public class PrintProcess implements Process {
-    public PrintProcess() {}
+    private final Expression expression;
+
+    public PrintProcess( Expression expression ) {
+        this.expression = expression;
+    }
 
     @Override
     public Process copy( TransformationReason reason ) {
-        return new PrintProcess();
+        return new PrintProcess( expression.cloneExpression( reason ) );
     }
 
     @Override
@@ -137,8 +153,8 @@ public class PrintProcess implements Process {
         if( ExecutionThread.currentThread().isKilled() )
             return;
 
-        // Mockup: print "hello" when PRINT is encountered
-        System.out.println( "hello" );
+        Value value = expression.evaluate();
+        System.out.println( value.strValue() );
     }
 
     @Override
@@ -161,7 +177,7 @@ Add visitor implementation:
 ```java
 @Override
 public void visit( PrintStatement n ) {
-    currProcess = new PrintProcess();
+    currProcess = new PrintProcess( buildExpression( n.expression() ) );
 }
 ```
 
@@ -174,27 +190,40 @@ All classes implementing `UnitOLVisitor` must implement the `visit(PrintStatemen
 import jolie.lang.parse.ast.PrintStatement;
 ```
 
-**Empty implementation:**
+**Empty implementation (for most visitors):**
 ```java
 @Override
 public void visit( PrintStatement n ) {}
 ```
 
 **Files to update:**
-- `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
 - `libjolie/src/main/java/jolie/lang/parse/TypeChecker.java`
 - `libjolie/src/main/java/jolie/lang/parse/module/SymbolReferenceResolver.java`
 - `libjolie/src/main/java/jolie/lang/parse/module/SymbolTableGenerator.java`
 - `libjolie/src/main/java/jolie/lang/parse/util/impl/ProgramInspectorCreatorVisitor.java`
 - `tools/jolie2plasma/src/main/java/joliex/plasma/impl/InterfaceVisitor.java`
 
-**Special case - OLParseTreeOptimizer.java:**
-Location: `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
+**Special case - SemanticVerifier.java:**
+Location: `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
 
+When your primitive has an expression parameter, you need to visit it:
 ```java
 @Override
 public void visit( PrintStatement n ) {
-    currNode = n;  // Pass through without optimization
+    n.expression().accept( this );
+}
+```
+
+**Special case - OLParseTreeOptimizer.java:**
+Location: `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
+
+When your primitive has an expression parameter, you need to optimize it:
+```java
+@Override
+public void visit( PrintStatement n ) {
+    currNode = new PrintStatement(
+        n.context(),
+        optimize( n.expression() ) );
 }
 ```
 
@@ -207,30 +236,54 @@ mvn compile -DskipTests
 
 ### Test the New Primitive
 
-Run with compiled classes directly (creates temporary test file):
+Test with a variable:
 ```bash
-echo 'main { print }' > /tmp/test_print.ol && \
+echo 'main { a = 5; print a }' > /tmp/test_print.ol && \
 java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes" \
      jolie.Jolie /tmp/test_print.ol && \
 rm /tmp/test_print.ol
 ```
 
-Expected output:
+Expected output: `5`
+
+Test with a string literal:
+```bash
+echo 'main { print "hello world" }' > /tmp/test_print.ol && \
+java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes" \
+     jolie.Jolie /tmp/test_print.ol && \
+rm /tmp/test_print.ol
 ```
-hello
+
+Expected output: `hello world`
+
+Test with an expression:
+```bash
+echo 'main { x = 10; y = 20; print x + y }' > /tmp/test_print.ol && \
+java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes" \
+     jolie.Jolie /tmp/test_print.ol && \
+rm /tmp/test_print.ol
 ```
+
+Expected output: `30`
 
 ## Summary
 
-To add a simple no-argument primitive to Jolie:
+To add a primitive statement to Jolie:
 
 1. **Define the token** (Scanner.java, Keywords.java)
 2. **Create AST node** (new PrintStatement.java)
+   - For primitives with arguments: add fields and accessor methods
 3. **Add parsing logic** (OLParser.java)
+   - For primitives with arguments: call `parseExpression()` or similar
 4. **Define visitor interface** (OLVisitor.java, UnitOLVisitor.java)
 5. **Create runtime process** (new PrintProcess.java)
+   - For primitives with arguments: accept Expression parameter and evaluate it
 6. **Connect AST to runtime** (OOITBuilder.java)
-7. **Implement visitor in all implementations** (SemanticVerifier, TypeChecker, etc.)
+   - For primitives with arguments: call `buildExpression()` to convert AST to runtime
+7. **Implement visitor in all implementations**
+   - Most are empty: SemanticVerifier (unless has expression), TypeChecker, Symbol resolvers
+   - SemanticVerifier: if primitive has expression, visit it
+   - OLParseTreeOptimizer: if primitive has expression, optimize it
 
 The visitor pattern requires updating many files, but most are empty implementations satisfying the interface contract.
 

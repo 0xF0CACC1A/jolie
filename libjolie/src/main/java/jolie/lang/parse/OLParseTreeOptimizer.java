@@ -780,7 +780,9 @@ public class OLParseTreeOptimizer {
 
 		@Override
 		public void visit( PrintStatement n ) {
-			currNode = n;
+			currNode = new PrintStatement(
+				n.context(),
+				optimize( n.expression() ) );
 		}
 
 		@Override

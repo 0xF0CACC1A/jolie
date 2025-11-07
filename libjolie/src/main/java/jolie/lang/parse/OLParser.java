@@ -2509,7 +2509,7 @@ public class OLParser extends AbstractParser {
 		case PRINT:
 			nextToken();
 			retVal =
-				new PrintStatement( getContext() );
+				new PrintStatement( getContext(), parseExpression() );
 			break;
 		case SYNCHRONIZED:
 			nextToken();

@@ -1206,7 +1206,9 @@ public class SemanticVerifier implements UnitOLVisitor {
 	}
 
 	@Override
-	public void visit( PrintStatement n ) {}
+	public void visit( PrintStatement n ) {
+		n.expression().accept( this );
+	}
 
 
 	@Override

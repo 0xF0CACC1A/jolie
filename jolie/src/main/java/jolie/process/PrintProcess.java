@@ -1,13 +1,19 @@
 package jolie.process;
 
 import jolie.ExecutionThread;
+import jolie.runtime.Value;
+import jolie.runtime.expression.Expression;
 
 public class PrintProcess implements Process {
-	public PrintProcess() {}
+	private final Expression expression;
+
+	public PrintProcess( Expression expression ) {
+		this.expression = expression;
+	}
 
 	@Override
 	public Process copy( TransformationReason reason ) {
-		return new PrintProcess();
+		return new PrintProcess( expression.cloneExpression( reason ) );
 	}
 
 	@Override
@@ -15,8 +21,8 @@ public class PrintProcess implements Process {
 		if( ExecutionThread.currentThread().isKilled() )
 			return;
 
-		// Mockup: print "hello" when PRINT is encountered
-		System.out.println( "hello" );
+		Value value = expression.evaluate();
+		System.out.println( value.strValue() );
 	}
 
 	@Override
