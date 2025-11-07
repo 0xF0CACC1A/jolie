@@ -113,6 +113,7 @@ public class Scanner implements AutoCloseable {
 		DEEP_COPY_WITH_LINKS_LEFT,	///< <<-
 		RUN,				///< run
 		UNDEF,				///< undef
+		PRINT,				///< print
 		HASH,				///< #
 		DOLLAR,				///< $
 		PERCENT_SIGN,		///< %
@@ -181,6 +182,7 @@ public class Scanner implements AutoCloseable {
 		UNRESERVED_KEYWORDS.put( "exit", TokenType.EXIT );
 		UNRESERVED_KEYWORDS.put( "constants", TokenType.CONSTANTS );
 		UNRESERVED_KEYWORDS.put( "undef", TokenType.UNDEF );
+		UNRESERVED_KEYWORDS.put( "print", TokenType.PRINT );
 		UNRESERVED_KEYWORDS.put( "for", TokenType.FOR );
 		UNRESERVED_KEYWORDS.put( "foreach", TokenType.FOREACH );
 		UNRESERVED_KEYWORDS.put( "is_defined", TokenType.IS_DEFINED );

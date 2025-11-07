@@ -110,6 +110,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
+import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.VariablePathNode.Type;
@@ -2504,6 +2505,11 @@ public class OLParser extends AbstractParser {
 				new UndefStatement( getContext(), parseVariablePath() );
 			eat(
 				Scanner.TokenType.RPAREN, "expected )" );
+			break;
+		case PRINT:
+			nextToken();
+			retVal =
+				new PrintStatement( getContext() );
 			break;
 		case SYNCHRONIZED:
 			nextToken();

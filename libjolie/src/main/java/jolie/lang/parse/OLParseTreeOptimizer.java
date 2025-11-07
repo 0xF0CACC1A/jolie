@@ -83,6 +83,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
+import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -775,6 +776,11 @@ public class OLParseTreeOptimizer {
 			currNode = new UndefStatement(
 				n.context(),
 				optimizePath( n.variablePath() ) );
+		}
+
+		@Override
+		public void visit( PrintStatement n ) {
+			currNode = n;
 		}
 
 		@Override
