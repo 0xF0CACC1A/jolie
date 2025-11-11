@@ -1,6 +1,8 @@
 // Test: Wildcard Selection with WHERE
 // Expected output: root.x, root.z
 
+include "console.iol"
+
 main {
     root.x = 10;
     root.y = 20;
@@ -10,7 +12,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

@@ -1,6 +1,8 @@
 // Test: Array iteration with AND operator
 // Expected: items[0], items[3] (type==user AND status==active)
 
+include "console.iol"
+
 main {
     items[0].type = "user";
     items[0].status = "active";
@@ -18,7 +20,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

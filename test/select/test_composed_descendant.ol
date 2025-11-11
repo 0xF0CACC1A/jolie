@@ -1,6 +1,8 @@
 // Test: Composed descendant pattern with field navigation
 // Expected: companies[0].departments[0].teams[0].projects[0].status, companies[0].departments[1].teams[0].projects[0].status
 
+include "console.iol"
+
 main {
     companies[0].departments[0].teams[0].projects[0].status = "active";
     companies[0].departments[0].teams[0].projects[0].name = "Project A";
@@ -15,7 +17,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

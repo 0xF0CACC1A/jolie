@@ -1,6 +1,8 @@
 // Test: Nested path traversal in WHERE
 // Expected: data[1].a (has b.c==5)
 
+include "console.iol"
+
 main {
     data[0].a.id = 1;
     data[0].a.b.c = 6;
@@ -17,7 +19,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

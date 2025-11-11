@@ -1,6 +1,8 @@
 // Test: Array iteration with parentheses for precedence
 // Expected: items[0], items[1] ((type==premium OR status==active) AND verified==true)
 
+include "console.iol"
+
 main {
     items[0].type = "premium";
     items[0].status = "active";
@@ -22,7 +24,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

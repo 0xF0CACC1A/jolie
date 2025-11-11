@@ -1,6 +1,8 @@
 // Test: Nested Navigation with Child Field Filter
 // Expected: data[1].a (where .b==5)
 
+include "console.iol"
+
 main {
     data[0].a.b = 6;
     data[1].a.b = 5;
@@ -9,7 +11,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

@@ -1,6 +1,8 @@
 // Test: Array iteration with descendant search in WHERE
 // Expected: companies[0].projects[0] (status==in_progress AND technologies contains Python)
 
+include "console.iol"
+
 main {
     companies[0].projects[0].project_id = "P001";
     companies[0].projects[0].status = "in_progress";
@@ -20,7 +22,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

@@ -1,6 +1,8 @@
 // Test: Simple Path Navigation with WHERE
 // Expected output: a.b.c
 
+include "console.iol"
+
 main {
     a.b.c = 5;
 
@@ -8,7 +10,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

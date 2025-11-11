@@ -1,6 +1,8 @@
 // Test: Field existence check with AND
 // Expected: items[0] (has email AND age==30)
 
+include "console.iol"
+
 main {
     items[0].name = "Alice";
     items[0].age = 30;
@@ -20,7 +22,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

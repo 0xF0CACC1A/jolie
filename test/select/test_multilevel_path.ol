@@ -1,6 +1,8 @@
 // Test: Multi-Level Path Traversal
 // Expected: accounts[0] (.user.settings.theme==dark)
 
+include "console.iol"
+
 main {
     accounts[0].user.settings.theme = "dark";
     accounts[1].user.settings.theme = "light";
@@ -10,7 +12,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

@@ -1,6 +1,8 @@
 // Test: Nested Path Existence
 // Expected: users[0] (has .settings.notifications)
 
+include "console.iol"
+
 main {
     users[0].name = "Alice";
     users[0].settings.notifications.enabled = "true";
@@ -14,7 +16,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

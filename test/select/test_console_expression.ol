@@ -1,5 +1,3 @@
-from console import Console
-
 include "console.iol"
 
 main {
@@ -10,7 +8,6 @@ main {
     println@Console("Testing SELECT as expression")();
     println@Console("============================")();
 
-    // Use SELECT as expression with deep copy operator
     result << select "$.*" into results from root where ". == 10";
 
     println@Console("Results from INTO (side effect):")();

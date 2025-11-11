@@ -1,6 +1,8 @@
 // Test: Array iteration with NOT operator
 // Expected: items[1] (status==active AND NOT type==admin)
 
+include "console.iol"
+
 main {
     items[0].type = "admin";
     items[0].status = "active";
@@ -15,7 +17,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

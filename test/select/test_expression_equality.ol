@@ -1,3 +1,5 @@
+include "console.iol"
+
 main {
     root.x = 10;
     root.y = 20;
@@ -9,17 +11,17 @@ main {
     // Print results1 (side effect from INTO)
     i = 0;
     while( i < #results1 ) {
-        print results1[i];
+        println@Console(results1[i])();
         i++
     };
 
     // Print separator
-    print "---";
+    println@Console("---")();
 
     // Print result2.result (return value from expression)
     i = 0;
     while( i < #result2.result ) {
-        print result2.result[i];
+        println@Console(result2.result[i])();
         i++
     }
 }

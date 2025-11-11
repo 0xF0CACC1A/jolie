@@ -1,18 +1,39 @@
 #!/usr/bin/env python3
 import subprocess
 import sys
+import os
+import pathlib
 
-def run(cmd):
-    return subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd="/home/matteo/JOLIE/jolie")
+# Get project root relative to this script
+project_root = pathlib.Path(__file__).parent.parent.parent
 
-# Clean build
-result = run("mvn -q clean compile -DskipTests")
+def run(cmd, env=None):
+    return subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=str(project_root), env=env)
+
+# Build
+print("Building project...")
+result = run("mvn -q clean package -DskipTests -pl '!test'")
 if result.returncode != 0:
     print("Build failed:", result.stderr)
     sys.exit(1)
 
-# Classpath with local ANTLR JAR
-CP = "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes:libjolie/target/generated-sources/antlr4:test/select/antlr4-runtime-4.13.1.jar"
+# Set up dist directory
+print("Setting up dist directory...")
+run("rm -rf dist && mkdir -p dist/lib dist/javaServices dist/extensions")
+run("cp libjolie/target/libjolie-*.jar dist/lib/libjolie.jar")
+run("cp jolie/target/jolie-*.jar dist/jolie.jar")
+run("cp jolie-cli/target/jolie-cli-*.jar dist/jolie-cli.jar")
+run("cp test/select/antlr4-runtime-4.13.1.jar dist/lib/")
+run("cp javaServices/coreJavaServices/target/coreJavaServices-*.jar dist/javaServices/")
+run("cp extensions/jolie-embedding-legacy/target/jolie-embedding-legacy-*.jar dist/extensions/")
+run("cp launchers/unix/jolie dist/jolie && chmod +x dist/jolie")
+run("sed -i 's/:$JOLIE_HOME\\/lib\\/json-simple.jar:/:$JOLIE_HOME\\/lib\\/json-simple.jar:$JOLIE_HOME\\/lib\\/antlr4-runtime-4.13.1.jar:/' dist/jolie")
+
+# Set up environment for dist/jolie
+jolie_env = os.environ.copy()
+jolie_env['JOLIE_HOME'] = str(project_root / "dist")
+
+print("Running tests...\n")
 
 # Test cases: (filename, [expected output lines])
 # Note: Order matches stack-based traversal output
@@ -40,7 +61,7 @@ tests = [
 # Run tests
 results = []
 for test_file, expected in tests:
-    result = run(f"java -cp {CP} jolie.Jolie test/select/{test_file}")
+    result = run(f"dist/jolie test/select/{test_file}", env=jolie_env)
     output = [line.strip() for line in result.stdout.strip().split('\n') if line.strip()]
     passed = output == expected
     results.append((test_file, passed, expected, output))

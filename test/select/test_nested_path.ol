@@ -1,6 +1,8 @@
 // Test: Nested Path Selection
 // Expected output: data.items.x, data.items.z
 
+include "console.iol"
+
 main {
     data.items.x = 10;
     data.items.y = 20;
@@ -10,7 +12,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

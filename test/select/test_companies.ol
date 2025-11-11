@@ -1,6 +1,8 @@
 // Test: Complex nested structure with descendant search
 // Expected: companies[0].departments[0].teams[0].projects[0], companies[2].departments[0].teams[0].projects[1]
 
+include "console.iol"
+
 main {
     // Company 0 - has in_progress project with Python
     companies[0].name = "TechCorp";
@@ -32,7 +34,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

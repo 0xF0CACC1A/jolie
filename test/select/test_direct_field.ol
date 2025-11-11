@@ -1,6 +1,8 @@
 // Test: Direct Field with Single Dot
 // Expected: projects[0] (status==active AND technologies==Python)
 
+include "console.iol"
+
 main {
     projects[0].status = "active";
     projects[0].technologies = "Python";
@@ -17,7 +19,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }

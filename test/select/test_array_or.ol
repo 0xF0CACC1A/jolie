@@ -1,6 +1,8 @@
 // Test: Array iteration with OR operator
 // Expected: items[0], items[3] (status==active OR status==completed)
 
+include "console.iol"
+
 main {
     items[0].status = "active";
     items[1].status = "pending";
@@ -11,7 +13,7 @@ main {
 
     i = 0;
     while( i < #results ) {
-        print results[i];
+        println@Console(results[i])();
         i++
     }
 }
