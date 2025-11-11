@@ -212,6 +212,127 @@ Required because all classes implementing `UnitOLVisitor` must provide the metho
 5. **Missing ANTLR runtime at execution**: JAR must be on classpath when running Jolie programs
 6. **Wrong result storage**: Use `getValueVector()` for array storage, not nested fields
 
+## Converting SELECT to an Expression Primitive
+
+The SELECT primitive was originally implemented as a statement but can also be used as an expression with the deep copy operator `<<`. This section documents the conversion process.
+
+### Expression vs Statement Usage
+
+**Statement syntax (original):**
+```jolie
+select "$.*" into results from root where ". == 10"
+```
+
+**Expression syntax (with deep copy):**
+```jolie
+result << select "$.*" into results from root where ". == 10"
+```
+
+Both syntaxes work simultaneously. The INTO keyword remains functional in both cases.
+
+### Files Required for Expression Support
+
+#### 1. Core Expression Implementation (Strictly Required)
+
+**`libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectExpressionNode.java`**
+- New AST node in `expression` package (not `ast` package like SelectStatement)
+- Identical structure to SelectStatement: 4 fields (2 strings, 2 VariablePathNode)
+- Must implement `accept()` method calling `visitor.visit(this, ctx)`
+
+**`jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`**
+- Implements `Expression` interface with two methods:
+  - `Value evaluate()` - executes SELECT query and returns result Value
+  - `Expression cloneExpression(TransformationReason)` - clones for spawn/parallel
+- Contains same logic as SelectProcess.run() but returns a Value
+- Returns Value with structure: `result.getChildren("result").get(i)` containing matching paths
+
+**`libjolie/src/main/java/jolie/lang/parse/OLVisitor.java`**
+- Add interface method: `R visit(SelectExpressionNode n, C ctx);`
+- Placed with other expression visitor methods (near IfExpressionNode)
+
+**`libjolie/src/main/java/jolie/lang/parse/OLParser.java`**
+- Add `case SELECT:` block in `parseFactor()` method (NOT parseBasicStatement)
+- Identical parsing logic to statement version
+- Creates `SelectExpressionNode` instead of `SelectStatement`
+- Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+
+**`jolie/src/main/java/jolie/OOITBuilder.java`**
+- Add `visit(SelectExpressionNode n)` method
+- Sets `currExpression` (not `currProcess`)
+- Creates `SelectExpression` with same parameters as SelectProcess
+- Add imports for both SelectExpressionNode and SelectExpression
+
+#### 2. Visitor Interface Implementation (Required for Compilation)
+
+**`libjolie/src/main/java/jolie/lang/parse/UnitOLVisitor.java`**
+- Add method declaration: `void visit(SelectExpressionNode n);`
+- Add default implementation delegating to single-parameter visit
+
+All classes implementing UnitOLVisitor must add visit method:
+
+**Files with Logic (actual implementation):**
+- `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
+  - Visits variable paths: `n.intoVariable().accept(this); n.fromVariable().accept(this);`
+  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+
+- `libjolie/src/main/java/jolie/lang/parse/TypeChecker.java`
+  - Same as SemanticVerifier
+
+- `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
+  - Optimizes variable paths, reconstructs SelectExpressionNode
+  - Pattern: `currNode = new SelectExpressionNode(n.context(), n.selectQuery(), optimizeNode(n.intoVariable()), optimizeNode(n.fromVariable()), n.whereQuery());`
+  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+
+- `libjolie/src/main/java/jolie/lang/parse/module/SymbolReferenceResolver.java`
+  - Visits variable paths
+  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+
+- `libjolie/src/main/java/jolie/lang/parse/module/SymbolTableGenerator.java`
+  - Visits variable paths
+  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+
+**Files with Empty Stubs (satisfy interface only):**
+- `libjolie/src/main/java/jolie/lang/parse/util/impl/ProgramInspectorCreatorVisitor.java`
+  - Empty implementation: `public void visit(SelectExpressionNode n) { n.intoVariable().accept(this); n.fromVariable().accept(this); }`
+
+- `tools/jolie2plasma/src/main/java/joliex/plasma/impl/InterfaceVisitor.java`
+  - Empty stub: `public void visit(SelectExpressionNode n) {}`
+
+### Key Architectural Decisions for Expressions
+
+1. **parseFactor() not parseBasicStatement()**: Expressions are parsed in factor parsing, statements in statement parsing
+2. **currExpression not currProcess**: OOITBuilder sets currExpression field for expressions
+3. **Return Value from evaluate()**: Expression.evaluate() must return a Value, not void
+4. **Deep copy semantics**: The `<<` operator calls evaluate() and deep-copies result
+5. **Side effects preserved**: Even though it's an expression, INTO still modifies intoVariable
+6. **Dual return**: evaluate() both modifies intoVariable AND returns a result Value
+
+### Strictly Required vs Interface Satisfaction
+
+**Strictly Required (7 files):**
+1. SelectExpressionNode.java (AST)
+2. SelectExpression.java (runtime)
+3. OLVisitor.java (interface signature)
+4. OLParser.java (parsing logic)
+5. OOITBuilder.java (builds runtime from AST)
+6. UnitOLVisitor.java (default visitor)
+7. One of: SemanticVerifier/TypeChecker (to implement the interface method)
+
+**Interface Satisfaction Only (6 files):**
+- TypeChecker, OLParseTreeOptimizer, SymbolReferenceResolver, SymbolTableGenerator, ProgramInspectorCreatorVisitor, InterfaceVisitor
+- Contain either empty implementations or simple variable path visitation
+- Required only because UnitOLVisitor is an interface, not abstract class
+- Java requires all interface methods to be implemented by concrete classes
+
+### Common Pitfalls for Expression Conversion
+
+1. **Parsing in wrong location**: Must add to parseFactor(), not parseBasicStatement()
+2. **Missing imports**: Each visitor file needs SelectExpressionNode import
+3. **Wrong builder field**: Must set currExpression, not currProcess
+4. **Forgetting return value**: evaluate() must return a Value, cannot be void
+5. **Missing import in OOITBuilder**: Need both AST and runtime SelectExpression imports
+6. **Incomplete visitor updates**: All 7 UnitOLVisitor implementations must be updated
+
 ## Impact Summary
 
 **Compilation**: Requires ANTLR Maven plugin to generate parser classes before Java compilation
@@ -249,6 +370,11 @@ Tests located in `test/select/` verify the following features:
 - `||` - OR operator
 - `!` - NOT operator
 - `()` - parentheses for precedence
+
+**Expression usage:**
+- `test_expression_equality.ol` - Verifies SELECT as expression with deep copy operator
+- Compares `results1` (INTO side effect) with `result2.result` (expression return value)
+- Validates that both the side effect and return value contain identical results
 
 **Run tests:**
 ```bash

@@ -134,6 +134,7 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
+import jolie.lang.parse.ast.expression.SelectExpressionNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -3684,6 +3685,21 @@ public class OLParser extends AbstractParser {
 				break;
 			case IF:
 				retVal = parseIfExpression();
+				break;
+			case SELECT:
+				nextToken();
+				assertToken( Scanner.TokenType.STRING, "expected SELECT query string" );
+				String selectQuery = token.content().replaceAll( "\"", "" );
+				nextToken();
+				eat( Scanner.TokenType.INTO, "expected INTO after SELECT expression" );
+				VariablePathNode intoVar = parseVariablePath();
+				eat( Scanner.TokenType.FROM, "expected FROM after INTO variable" );
+				VariablePathNode fromVar = parseVariablePath();
+				eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
+				assertToken( Scanner.TokenType.STRING, "expected WHERE query string" );
+				String whereQuery = token.content().replaceAll( "\"", "" );
+				nextToken();
+				retVal = new SelectExpressionNode( getContext(), selectQuery, intoVar, fromVar, whereQuery );
 				break;
 			default:
 				break;

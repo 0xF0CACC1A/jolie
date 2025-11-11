@@ -34,6 +34,7 @@ tests = [
     ("test_array_child_filter.ol", ["data[1].a"]),
     ("test_composed_descendant.ol", ["companies[0].departments[1].teams.projects[0].status", "companies[0].departments[0].teams.projects[0].status"]),
     ("test_companies.ol", ["companies[2].departments.teams.projects[1]", "companies[0].departments.teams.projects[0]"]),
+    ("test_expression_equality.ol", ["root.z", "root.x", "---", "root.z", "root.x"]),
 ]
 
 # Run tests

@@ -775,4 +775,12 @@ public interface UnitOLVisitor extends OLVisitor< Unit, Unit > {
 		visit( n );
 		return Unit.INSTANCE;
 	}
+
+	void visit( SelectExpressionNode n );
+
+	@Override
+	default Unit visit( SelectExpressionNode n, Unit ctx ) {
+		visit( n );
+		return Unit.INSTANCE;
+	}
 }

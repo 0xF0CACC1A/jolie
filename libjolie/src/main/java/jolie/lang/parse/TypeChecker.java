@@ -689,6 +689,12 @@ public class TypeChecker implements UnitOLVisitor {
 	}
 
 	@Override
+	public void visit( SelectExpressionNode n ) {
+		n.intoVariable().accept( this );
+		n.fromVariable().accept( this );
+	}
+
+	@Override
 	public void visit( IfStatement n ) {
 		if( n.children().isEmpty() ) {
 			return;

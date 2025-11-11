@@ -128,6 +128,7 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
+import jolie.lang.parse.ast.expression.SelectExpressionNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -225,6 +226,7 @@ import jolie.runtime.expression.IsStringExpression;
 import jolie.runtime.expression.NotExpression;
 import jolie.runtime.expression.OrCondition;
 import jolie.runtime.expression.ProductExpression;
+import jolie.runtime.expression.SelectExpression;
 import jolie.runtime.expression.SolicitResponseExpression;
 import jolie.runtime.expression.SumExpression;
 import jolie.runtime.expression.ValueVectorSizeExpression;
@@ -1481,6 +1483,15 @@ public class OOITBuilder implements UnitOLVisitor {
 	@Override
 	public void visit( VoidExpressionNode n ) {
 		currExpression = new VoidExpression();
+	}
+
+	@Override
+	public void visit( SelectExpressionNode n ) {
+		currExpression = new SelectExpression(
+			n.selectQuery(),
+			buildVariablePath( n.intoVariable() ),
+			buildVariablePath( n.fromVariable() ),
+			n.whereQuery() );
 	}
 
 	@Override

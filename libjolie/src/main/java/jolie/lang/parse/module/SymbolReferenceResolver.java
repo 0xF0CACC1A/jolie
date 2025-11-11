@@ -122,6 +122,7 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
+import jolie.lang.parse.ast.expression.SelectExpressionNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -581,6 +582,12 @@ public class SymbolReferenceResolver {
 			n.guard().accept( this );
 			n.thenExpression().accept( this );
 			n.elseExpression().accept( this );
+		}
+
+		@Override
+		public void visit( SelectExpressionNode n ) {
+			n.intoVariable().accept( this );
+			n.fromVariable().accept( this );
 		}
 
 		@Override

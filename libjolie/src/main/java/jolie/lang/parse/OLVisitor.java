@@ -271,4 +271,6 @@ public interface OLVisitor< C, R > {
 	R visit( SolicitResponseExpressionNode n, C ctx );
 
 	R visit( IfExpressionNode n, C Ctx );
+
+	R visit( SelectExpressionNode n, C ctx );
 }

@@ -366,6 +366,12 @@ public class SymbolTableGenerator {
 		}
 
 		@Override
+		public void visit( SelectExpressionNode n ) {
+			n.intoVariable().accept( this );
+			n.fromVariable().accept( this );
+		}
+
+		@Override
 		public void visit( InterfaceDefinition n ) {
 			try {
 				this.symbolTable.addSymbol( n.name(), n );
