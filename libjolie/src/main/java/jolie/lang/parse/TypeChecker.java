@@ -89,7 +89,6 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
@@ -374,20 +373,16 @@ public class TypeChecker implements UnitOLVisitor {
 		return ret;
 	}
 
-	@Override
 	public void visit( Program n ) {
 		for( OLSyntaxNode node : n.children() ) {
 			check( node, new TypingResult() );
 		}
 	}
 
-	@Override
 	public void visit( OneWayOperationDeclaration decl ) {}
 
-	@Override
 	public void visit( RequestResponseOperationDeclaration decl ) {}
 
-	@Override
 	public void visit( DefinitionNode n ) {
 		insideInit = false;
 		TypingResult entry = null;
@@ -412,7 +407,6 @@ public class TypeChecker implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( ParallelStatement n ) {
 		if( n.children().isEmpty() ) {
 			return;
@@ -436,7 +430,6 @@ public class TypeChecker implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( SequenceStatement n ) {
 		if( n.children().isEmpty() ) {
 			return;
@@ -477,7 +470,6 @@ public class TypeChecker implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( NDChoiceStatement n ) {
 		if( n.children().isEmpty() ) {
 			return;
@@ -536,7 +528,6 @@ public class TypeChecker implements UnitOLVisitor {
 		sessionStarter = false;
 	}
 
-	@Override
 	public void visit( OneWayOperationStatement n ) {
 		if( executionMode == ExecutionMode.SINGLE ) {
 			return;
@@ -570,7 +561,6 @@ public class TypeChecker implements UnitOLVisitor {
 		sessionStarter = false;
 	}
 
-	@Override
 	public void visit( RequestResponseOperationStatement n ) {
 		if( executionMode == ExecutionMode.SINGLE ) {
 			return;
@@ -610,26 +600,20 @@ public class TypeChecker implements UnitOLVisitor {
 		typingResult.registerOperations( internalProcessTyping );
 	}
 
-	@Override
 	public void visit( NotificationOperationStatement n ) {}
 
-	@Override
 	public void visit( SolicitResponseOperationStatement n ) {
 		if( n.inputVarPath() != null && n.inputVarPath().isCSet() ) {
 			error( n, "Solicit-response statements can not receive on a correlation variable" );
 		}
 	}
 
-	@Override
 	public void visit( FreshValueExpressionNode n ) {}
 
-	@Override
 	public void visit( LinkInStatement n ) {}
 
-	@Override
 	public void visit( LinkOutStatement n ) {}
 
-	@Override
 	public void visit( AssignStatement n ) {
 		if( n.variablePath().isStatic() ) {
 			if( n.expression() instanceof ConstantIntegerExpression ) {
@@ -669,32 +653,25 @@ public class TypeChecker implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( AddAssignStatement n ) {}
 
-	@Override
 	public void visit( SubtractAssignStatement n ) {}
 
-	@Override
 	public void visit( MultiplyAssignStatement n ) {}
 
-	@Override
 	public void visit( DivideAssignStatement n ) {}
 
-	@Override
 	public void visit( IfExpressionNode n ) {
 		n.guard().accept( this );
 		n.thenExpression().accept( this );
 		n.elseExpression().accept( this );
 	}
 
-	@Override
 	public void visit( SelectExpressionNode n ) {
 		n.intoVariable().accept( this );
 		n.fromVariable().accept( this );
 	}
 
-	@Override
 	public void visit( IfStatement n ) {
 		if( n.children().isEmpty() ) {
 			return;
@@ -740,10 +717,8 @@ public class TypeChecker implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( InstanceOfExpressionNode n ) {}
 
-	@Override
 	public void visit( DefinitionCallStatement n ) {
 		typingResult = definitionTyping.get( n.id() );
 		if( typingResult == null ) {
@@ -752,10 +727,8 @@ public class TypeChecker implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( InlineTreeExpressionNode n ) {}
 
-	@Override
 	public void visit( WhileStatement n ) {
 		typingResult = check( n.body(), entryTyping );
 		if( !typingResult.providedCorrPaths.isEmpty() ) {
@@ -764,83 +737,59 @@ public class TypeChecker implements UnitOLVisitor {
 		typingResult.providedVarPaths.clear();
 	}
 
-	@Override
 	public void visit( OrConditionNode n ) {}
 
-	@Override
 	public void visit( AndConditionNode n ) {}
 
-	@Override
 	public void visit( NotExpressionNode n ) {}
 
-	@Override
 	public void visit( CompareConditionNode n ) {}
 
-	@Override
 	public void visit( ConstantIntegerExpression n ) {}
 
-	@Override
 	public void visit( ConstantLongExpression n ) {}
 
-	@Override
 	public void visit( ConstantBoolExpression n ) {}
 
-	@Override
 	public void visit( ConstantDoubleExpression n ) {}
 
-	@Override
 	public void visit( ConstantStringExpression n ) {}
 
-	@Override
 	public void visit( ProductExpressionNode n ) {}
 
-	@Override
 	public void visit( SumExpressionNode n ) {}
 
-	@Override
 	public void visit( VariableExpressionNode n ) {}
 
-	@Override
 	public void visit( NullProcessStatement n ) {}
 
-	@Override
 	public void visit( Scope n ) {
 		typingResult = check( n.body(), entryTyping );
 	}
 
-	@Override
 	public void visit( InstallStatement n ) { // TODO check code inside install
 
 	}
 
-	@Override
 	public void visit( CompensateStatement n ) {}
 
-	@Override
 	public void visit( ThrowStatement n ) {}
 
-	@Override
 	public void visit( ExitStatement n ) {}
 
-	@Override
 	public void visit( ExecutionInfo n ) {}
 
-	@Override
 	public void visit( CorrelationSetInfo n ) {}
 
-	@Override
 	public void visit( InputPortInfo n ) {}
 
-	@Override
 	public void visit( OutputPortInfo n ) {}
 
-	@Override
 	public void visit( PointerStatement n ) {
 		typingResult.invalidate( n.rightPath() );
 		typingResult.invalidate( n.leftPath() );
 	}
 
-	@Override
 	public void visit( DeepCopyStatement n ) {
 		if( n.rightExpression() instanceof VariableExpressionNode ) {
 			// TODO: check whether to invalidate all variable paths in other expression cases
@@ -849,36 +798,24 @@ public class TypeChecker implements UnitOLVisitor {
 		typingResult.invalidate( n.leftPath() );
 	}
 
-	@Override
 	public void visit( RunStatement n ) {}
 
-	@Override
 	public void visit( UndefStatement n ) {
 		typingResult.invalidate( n.variablePath() );
 	}
 
-	@Override
-	public void visit( PrintStatement n ) {}
-
-	@Override
 	public void visit( SelectStatement n ) {}
 
-	@Override
 	public void visit( ValueVectorSizeExpressionNode n ) {}
 
-	@Override
 	public void visit( PreIncrementStatement n ) {}
 
-	@Override
 	public void visit( PostIncrementStatement n ) {}
 
-	@Override
 	public void visit( PreDecrementStatement n ) {}
 
-	@Override
 	public void visit( PostDecrementStatement n ) {}
 
-	@Override
 	public void visit( ForStatement n ) {
 		typingResult = check( n.body(), entryTyping );
 		if( !typingResult.providedCorrPaths.isEmpty() ) {
@@ -887,7 +824,6 @@ public class TypeChecker implements UnitOLVisitor {
 		typingResult.providedVarPaths.clear();
 	}
 
-	@Override
 	public void visit( ForEachSubNodeStatement n ) {
 		typingResult = check( n.body(), entryTyping );
 		if( !typingResult.providedCorrPaths.isEmpty() ) {
@@ -896,87 +832,62 @@ public class TypeChecker implements UnitOLVisitor {
 		typingResult.providedVarPaths.clear();
 	}
 
-	@Override
 	public void visit( ForEachArrayItemStatement n ) {}
 
-	@Override
 	public void visit( SpawnStatement n ) {}
 
-	@Override
 	public void visit( IsTypeExpressionNode n ) {}
 
-	@Override
 	public void visit( TypeCastExpressionNode n ) {}
 
-	@Override
 	public void visit( SynchronizedStatement n ) {
 		typingResult = check( n.body(), entryTyping );
 	}
 
-	@Override
 	public void visit( CurrentHandlerStatement n ) {}
 
-	@Override
 	public void visit( EmbeddedServiceNode n ) {}
 
-	@Override
 	public void visit( InstallFixedVariableExpressionNode n ) {}
 
-	@Override
 	public void visit( VariablePathNode n ) {}
 
-	@Override
 	public void visit( TypeInlineDefinition n ) {}
 
-	@Override
 	public void visit( TypeDefinitionLink n ) {}
 
-	@Override
 	public void visit( InterfaceDefinition n ) {}
 
-	@Override
 	public void visit( DocumentationComment n ) {}
 
-	@Override
 	public void visit( InterfaceExtenderDefinition n ) {}
 
-	@Override
 	public void visit( CourierDefinitionNode n ) {}
 
-	@Override
 	public void visit( CourierChoiceStatement n ) {}
 
-	@Override
 	public void visit( NotificationForwardStatement n ) {}
 
-	@Override
 	public void visit( SolicitResponseForwardStatement n ) {}
 
-	@Override
 	public void visit( VoidExpressionNode n ) {}
 
-	@Override
 	public void visit( ProvideUntilStatement n ) {
 		n.provide().accept( this );
 		n.until().accept( this );
 	}
 
-	@Override
 	public void visit( TypeChoiceDefinition n ) {
 		// todo
 	}
 
-	@Override
 	public void visit( ImportStatement n ) {
 
 	}
 
-	@Override
 	public void visit( ServiceNode n ) {}
 
-	@Override
 	public void visit( EmbedServiceNode n ) {}
 
-	@Override
 	public void visit( SolicitResponseExpressionNode n ) {}
 }

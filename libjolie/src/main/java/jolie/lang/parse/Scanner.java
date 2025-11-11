@@ -113,7 +113,6 @@ public class Scanner implements AutoCloseable {
 		DEEP_COPY_WITH_LINKS_LEFT,	///< <<-
 		RUN,				///< run
 		UNDEF,				///< undef
-		PRINT,				///< print
 		SELECT,				///< select
 		INTO,				///< into
 		WHERE,				///< where
@@ -185,7 +184,6 @@ public class Scanner implements AutoCloseable {
 		UNRESERVED_KEYWORDS.put( "exit", TokenType.EXIT );
 		UNRESERVED_KEYWORDS.put( "constants", TokenType.CONSTANTS );
 		UNRESERVED_KEYWORDS.put( "undef", TokenType.UNDEF );
-		UNRESERVED_KEYWORDS.put( "print", TokenType.PRINT );
 		UNRESERVED_KEYWORDS.put( "select", TokenType.SELECT );
 		UNRESERVED_KEYWORDS.put( "into", TokenType.INTO );
 		UNRESERVED_KEYWORDS.put( "where", TokenType.WHERE );

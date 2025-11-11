@@ -100,7 +100,6 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
@@ -1211,11 +1210,6 @@ public class SemanticVerifier implements UnitOLVisitor {
 		if( n.variablePath().isCSet() ) {
 			error( n, "Undefining a correlation variable is forbidden" );
 		}
-	}
-
-	@Override
-	public void visit( PrintStatement n ) {
-		n.expression().accept( this );
 	}
 
 	@Override

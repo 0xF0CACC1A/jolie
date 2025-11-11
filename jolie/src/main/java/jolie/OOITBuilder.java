@@ -105,7 +105,6 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
@@ -184,7 +183,6 @@ import jolie.process.SubtractAssignmentProcess;
 import jolie.process.SynchronizedProcess;
 import jolie.process.ThrowProcess;
 import jolie.process.UndefProcess;
-import jolie.process.PrintProcess;
 import jolie.process.SelectProcess;
 import jolie.process.WhileProcess;
 import jolie.process.courier.ForwardNotificationProcess;
@@ -1720,11 +1718,6 @@ public class OOITBuilder implements UnitOLVisitor {
 	@Override
 	public void visit( UndefStatement n ) {
 		currProcess = new UndefProcess( buildVariablePath( n.variablePath() ) );
-	}
-
-	@Override
-	public void visit( PrintStatement n ) {
-		currProcess = new PrintProcess( buildExpression( n.expression() ) );
 	}
 
 	@Override

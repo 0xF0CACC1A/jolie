@@ -94,7 +94,6 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
@@ -204,7 +203,6 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( Program n ) {
 			for( OLSyntaxNode node : n.children() ) {
 				if( !isValid() ) {
@@ -214,12 +212,10 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( OneWayOperationDeclaration decl ) {
 			decl.requestType().accept( this );
 		}
 
-		@Override
 		public void visit( RequestResponseOperationDeclaration decl ) {
 			decl.requestType().accept( this );
 			decl.responseType().accept( this );
@@ -228,26 +224,22 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( DefinitionNode n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( ParallelStatement n ) {
 			for( OLSyntaxNode node : n.children() ) {
 				node.accept( this );
 			}
 		}
 
-		@Override
 		public void visit( SequenceStatement n ) {
 			for( OLSyntaxNode node : n.children() ) {
 				node.accept( this );
 			}
 		}
 
-		@Override
 		public void visit( NDChoiceStatement n ) {
 			for( Pair< OLSyntaxNode, OLSyntaxNode > child : n.children() ) {
 				child.key().accept( this );
@@ -255,18 +247,14 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( OneWayOperationStatement n ) {}
 
-		@Override
 		public void visit( RequestResponseOperationStatement n ) {
 			n.process().accept( this );
 		}
 
-		@Override
 		public void visit( NotificationOperationStatement n ) {}
 
-		@Override
 		public void visit( SolicitResponseOperationStatement n ) {
 			if( n.handlersFunction() != null ) {
 				for( Pair< String, OLSyntaxNode > handler : n.handlersFunction().pairs() ) {
@@ -275,38 +263,30 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( LinkInStatement n ) {}
 
-		@Override
 		public void visit( LinkOutStatement n ) {}
 
-		@Override
 		public void visit( AssignStatement n ) {
 			n.expression().accept( this );
 		}
 
-		@Override
 		public void visit( AddAssignStatement n ) {
 			n.expression().accept( this );
 		}
 
-		@Override
 		public void visit( SubtractAssignStatement n ) {
 			n.expression().accept( this );
 		}
 
-		@Override
 		public void visit( MultiplyAssignStatement n ) {
 			n.expression().accept( this );
 		}
 
-		@Override
 		public void visit( DivideAssignStatement n ) {
 			n.expression().accept( this );
 		}
 
-		@Override
 		public void visit( IfStatement n ) {
 			for( Pair< OLSyntaxNode, OLSyntaxNode > child : n.children() ) {
 				child.key().accept( this );
@@ -317,104 +297,82 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( DefinitionCallStatement n ) {}
 
-		@Override
 		public void visit( WhileStatement n ) {
 			n.condition().accept( this );
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( OrConditionNode n ) {
 			for( OLSyntaxNode node : n.children() ) {
 				node.accept( this );
 			}
 		}
 
-		@Override
 		public void visit( AndConditionNode n ) {
 			for( OLSyntaxNode node : n.children() ) {
 				node.accept( this );
 			}
 		}
 
-		@Override
 		public void visit( NotExpressionNode n ) {
 			n.expression().accept( this );
 		}
 
-		@Override
 		public void visit( CompareConditionNode n ) {
 			n.leftExpression().accept( this );
 			n.rightExpression().accept( this );
 		}
 
-		@Override
 		public void visit( ConstantIntegerExpression n ) {}
 
-		@Override
 		public void visit( ConstantDoubleExpression n ) {}
 
-		@Override
 		public void visit( ConstantBoolExpression n ) {}
 
-		@Override
 		public void visit( ConstantLongExpression n ) {}
 
-		@Override
 		public void visit( ConstantStringExpression n ) {}
 
-		@Override
 		public void visit( ProductExpressionNode n ) {
 			for( Pair< OperandType, OLSyntaxNode > node : n.operands() ) {
 				node.value().accept( this );
 			}
 		}
 
-		@Override
 		public void visit( SumExpressionNode n ) {
 			for( Pair< OperandType, OLSyntaxNode > node : n.operands() ) {
 				node.value().accept( this );
 			}
 		}
 
-		@Override
 		public void visit( VariableExpressionNode n ) {}
 
-		@Override
 		public void visit( NullProcessStatement n ) {}
 
-		@Override
 		public void visit( jolie.lang.parse.ast.Scope n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( InstallStatement n ) {
 			for( Pair< String, OLSyntaxNode > handlerFunction : n.handlersFunction().pairs() ) {
 				handlerFunction.value().accept( this );
 			}
 		}
 
-		@Override
 		public void visit( CompensateStatement n ) {}
 
-		@Override
 		public void visit( ThrowStatement n ) {
 			if( n.expression() != null ) {
 				n.expression().accept( this );
 			}
 		}
 
-		@Override
 		public void visit( ExitStatement n ) {}
 
-		@Override
 		public void visit( ExecutionInfo n ) {}
 
-		@Override
 		public void visit( CorrelationSetInfo n ) {
 			for( CorrelationVariableInfo cSetVar : n.variables() ) {
 				for( CorrelationAliasInfo aliases : cSetVar.aliases() ) {
@@ -423,7 +381,6 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( InputPortInfo n ) {
 			// resolve interface definition
 			for( InterfaceDefinition iface : n.getInterfaceList() ) {
@@ -454,7 +411,6 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( OutputPortInfo n ) {
 			// resolve interface definition
 			for( InterfaceDefinition iface : n.getInterfaceList() ) {
@@ -481,94 +437,68 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( PointerStatement n ) {}
 
-		@Override
 		public void visit( DeepCopyStatement n ) {
 			n.rightExpression().accept( this );
 		}
 
-		@Override
 		public void visit( RunStatement n ) {}
 
-		@Override
 		public void visit( UndefStatement n ) {}
 
-		@Override
-		public void visit( PrintStatement n ) {}
-
-		@Override
 		public void visit( SelectStatement n ) {}
 
-		@Override
 		public void visit( ValueVectorSizeExpressionNode n ) {}
 
-		@Override
 		public void visit( PreIncrementStatement n ) {}
 
-		@Override
 		public void visit( PostIncrementStatement n ) {}
 
-		@Override
 		public void visit( PreDecrementStatement n ) {}
 
-		@Override
 		public void visit( PostDecrementStatement n ) {}
 
-		@Override
 		public void visit( ForStatement n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( ForEachSubNodeStatement n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( ForEachArrayItemStatement n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( SpawnStatement n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( IsTypeExpressionNode n ) {}
 
-		@Override
 		public void visit( InstanceOfExpressionNode n ) {
 			n.type().accept( this );
 		}
 
-		@Override
 		public void visit( TypeCastExpressionNode n ) {}
 
-		@Override
 		public void visit( SynchronizedStatement n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( CurrentHandlerStatement n ) {}
 
-		@Override
 		public void visit( EmbeddedServiceNode n ) {
 			if( n.program() != null ) {
 				n.program().accept( this );
 			}
 		}
 
-		@Override
 		public void visit( InstallFixedVariableExpressionNode n ) {}
 
-		@Override
 		public void visit( VariablePathNode n ) {}
 
-		@Override
 		public void visit( TypeInlineDefinition n ) {
 			if( n.hasSubTypes() ) {
 				for( Map.Entry< String, TypeDefinition > subType : n.subTypes() ) {
@@ -577,20 +507,17 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( IfExpressionNode n ) {
 			n.guard().accept( this );
 			n.thenExpression().accept( this );
 			n.elseExpression().accept( this );
 		}
 
-		@Override
 		public void visit( SelectExpressionNode n ) {
 			n.intoVariable().accept( this );
 			n.fromVariable().accept( this );
 		}
 
-		@Override
 		public void visit( TypeDefinitionLink n ) {
 			TypeDefinition linkedType;
 			if( n.linkedTypeName().equals( TypeDefinitionUndefined.UNDEFINED_KEYWORD ) ) {
@@ -618,25 +545,20 @@ public class SymbolReferenceResolver {
 			n.setLinkedType( linkedType );
 		}
 
-		@Override
 		public void visit( InterfaceDefinition n ) {
 			for( OperationDeclaration op : n.operationsMap().values() ) {
 				op.accept( this );
 			}
 		}
 
-		@Override
 		public void visit( DocumentationComment n ) {}
 
-		@Override
 		public void visit( FreshValueExpressionNode n ) {}
 
-		@Override
 		public void visit( CourierDefinitionNode n ) {
 			n.body().accept( this );
 		}
 
-		@Override
 		public void visit( CourierChoiceStatement n ) {
 			for( InterfaceOneWayBranch owIfaceBranch : n.interfaceOneWayBranches() ) {
 				InterfaceDefinition iface = owIfaceBranch.interfaceDefinition;
@@ -694,13 +616,10 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( NotificationForwardStatement n ) {}
 
-		@Override
 		public void visit( SolicitResponseForwardStatement n ) {}
 
-		@Override
 		public void visit( InterfaceExtenderDefinition n ) {
 			if( n.defaultOneWayOperation() != null ) {
 				n.defaultOneWayOperation().accept( this );
@@ -713,7 +632,6 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( InlineTreeExpressionNode n ) {
 			for( Operation operation : n.operations() ) {
 				if( operation instanceof InlineTreeExpressionNode.AssignmentOperation ) {
@@ -726,16 +644,13 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( VoidExpressionNode n ) {}
 
-		@Override
 		public void visit( ProvideUntilStatement n ) {
 			n.provide().accept( this );
 			n.until().accept( this );
 		}
 
-		@Override
 		public void visit( TypeChoiceDefinition n ) {
 			n.left().accept( this );
 			if( n.right() != null ) {
@@ -743,7 +658,6 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( ImportStatement n ) {}
 
 		private Optional< SymbolInfo > getSymbol( ParsingContext context, String name ) {
@@ -757,13 +671,11 @@ public class SymbolReferenceResolver {
 			return Optional.empty();
 		}
 
-		@Override
 		public void visit( ServiceNode n ) {
 			n.parameterConfiguration().ifPresent( config -> config.type().accept( this ) );
 			n.program().accept( this );
 		}
 
-		@Override
 		public void visit( EmbedServiceNode n ) {
 			Optional< SymbolInfo > targetSymbolInfo = getSymbol( n.context(), n.serviceName() );
 			if( !targetSymbolInfo.isPresent() ) {
@@ -792,7 +704,6 @@ public class SymbolReferenceResolver {
 			}
 		}
 
-		@Override
 		public void visit( SolicitResponseExpressionNode n ) {}
 	}
 

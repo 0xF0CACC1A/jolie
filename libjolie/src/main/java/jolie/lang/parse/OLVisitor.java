@@ -76,7 +76,6 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
@@ -195,8 +194,6 @@ public interface OLVisitor< C, R > {
 	R visit( RunStatement n, C ctx );
 
 	R visit( UndefStatement n, C ctx );
-
-	R visit( PrintStatement n, C ctx );
 
 	R visit( SelectStatement n, C ctx );
 

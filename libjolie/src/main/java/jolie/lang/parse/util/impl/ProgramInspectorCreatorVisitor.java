@@ -86,7 +86,6 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.PrintStatement;
 import jolie.lang.parse.ast.SelectStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
@@ -140,14 +139,12 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		sources.add( n.context().source() );
 	}
 
-	@Override
 	public void visit( Program n ) {
 		for( OLSyntaxNode node : n.children() ) {
 			node.accept( this );
 		}
 	}
 
-	@Override
 	public void visit( InterfaceDefinition n ) {
 		List< InterfaceDefinition > list = interfaces.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
 		list.add( n );
@@ -155,7 +152,6 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		encounteredNode( n );
 	}
 
-	@Override
 	public void visit( TypeInlineDefinition n ) {
 		List< TypeDefinition > list = types.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
 		list.add( n );
@@ -163,7 +159,6 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		encounteredNode( n );
 	}
 
-	@Override
 	public void visit( TypeDefinitionLink n ) {
 		List< TypeDefinition > list = types.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
 		list.add( n );
@@ -171,14 +166,12 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		encounteredNode( n );
 	}
 
-	@Override
 	public void visit( InputPortInfo n ) {
 		List< InputPortInfo > list = inputPorts.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
 		list.add( n );
 		encounteredNode( n );
 	}
 
-	@Override
 	public void visit( OutputPortInfo n ) {
 		List< OutputPortInfo > list = outputPorts.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
 		list.add( n );
@@ -186,7 +179,6 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		encounteredNode( n );
 	}
 
-	@Override
 	public void visit( EmbeddedServiceNode n ) {
 		List< EmbeddedServiceNode > list =
 			embeddedServices.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
@@ -195,32 +187,26 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		encounteredNode( n );
 	}
 
-	@Override
 	public void visit( OneWayOperationDeclaration decl ) {}
 
-	@Override
 	public void visit( RequestResponseOperationDeclaration decl ) {}
 
-	@Override
 	public void visit( DefinitionNode n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( ParallelStatement n ) {
 		for( OLSyntaxNode node : n.children() ) {
 			node.accept( this );
 		}
 	}
 
-	@Override
 	public void visit( SequenceStatement n ) {
 		for( OLSyntaxNode node : n.children() ) {
 			node.accept( this );
 		}
 	}
 
-	@Override
 	public void visit( NDChoiceStatement n ) {
 		if( currentFirstInput != null ) {
 			for( Pair< OLSyntaxNode, OLSyntaxNode > pair : n.children() ) {
@@ -242,7 +228,6 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( OneWayOperationStatement n ) {
 		if( currentFirstInput == null ) {
 			currentFirstInput = n;
@@ -251,7 +236,6 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( RequestResponseOperationStatement n ) {
 		if( currentFirstInput == null ) {
 			currentFirstInput = n;
@@ -261,26 +245,20 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		n.process().accept( this );
 	}
 
-	@Override
 	public void visit( NotificationOperationStatement n ) {
 		addOlSyntaxNodeToBehaviouralDependencies( n );
 	}
 
-	@Override
 	public void visit( SolicitResponseOperationStatement n ) {
 		addOlSyntaxNodeToBehaviouralDependencies( n );
 	}
 
-	@Override
 	public void visit( LinkInStatement n ) {}
 
-	@Override
 	public void visit( LinkOutStatement n ) {}
 
-	@Override
 	public void visit( AssignStatement n ) {}
 
-	@Override
 	public void visit( IfStatement n ) {
 		for( Pair< OLSyntaxNode, OLSyntaxNode > pair : n.children() ) {
 			pair.key().accept( this );
@@ -291,204 +269,143 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( DefinitionCallStatement n ) {}
 
-	@Override
 	public void visit( WhileStatement n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( OrConditionNode n ) {}
 
-	@Override
 	public void visit( AndConditionNode n ) {}
 
-	@Override
 	public void visit( NotExpressionNode n ) {}
 
-	@Override
 	public void visit( CompareConditionNode n ) {}
 
-	@Override
 	public void visit( ConstantIntegerExpression n ) {}
 
-	@Override
 	public void visit( ConstantLongExpression n ) {}
 
-	@Override
 	public void visit( ConstantBoolExpression n ) {}
 
-	@Override
 	public void visit( ConstantDoubleExpression n ) {}
 
-	@Override
 	public void visit( ConstantStringExpression n ) {}
 
-	@Override
 	public void visit( ProductExpressionNode n ) {}
 
-	@Override
 	public void visit( SumExpressionNode n ) {}
 
-	@Override
 	public void visit( VariableExpressionNode n ) {}
 
-	@Override
 	public void visit( NullProcessStatement n ) {}
 
-	@Override
 	public void visit( Scope n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( InstallStatement n ) {
 		for( int i = 0; i < n.handlersFunction().pairs().length; i++ ) {
 			n.handlersFunction().pairs()[ i ].value().accept( this );
 		}
 	}
 
-	@Override
 	public void visit( CompensateStatement n ) {}
 
-	@Override
 	public void visit( ThrowStatement n ) {}
 
-	@Override
 	public void visit( ExitStatement n ) {}
 
-	@Override
 	public void visit( ExecutionInfo n ) {}
 
-	@Override
 	public void visit( CorrelationSetInfo n ) {}
 
-	@Override
 	public void visit( PointerStatement n ) {}
 
-	@Override
 	public void visit( DeepCopyStatement n ) {}
 
-	@Override
 	public void visit( RunStatement n ) {}
 
-	@Override
 	public void visit( UndefStatement n ) {}
 
-	@Override
-	public void visit( PrintStatement n ) {}
-
-	@Override
 	public void visit( SelectStatement n ) {}
 
-	@Override
 	public void visit( ValueVectorSizeExpressionNode n ) {}
 
-	@Override
 	public void visit( PreIncrementStatement n ) {}
 
-	@Override
 	public void visit( PostIncrementStatement n ) {}
 
-	@Override
 	public void visit( PreDecrementStatement n ) {}
 
-	@Override
 	public void visit( PostDecrementStatement n ) {}
 
-	@Override
 	public void visit( ForStatement n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( ForEachSubNodeStatement n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( ForEachArrayItemStatement n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( SpawnStatement n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( IsTypeExpressionNode n ) {}
 
-	@Override
 	public void visit( TypeCastExpressionNode n ) {}
 
-	@Override
 	public void visit( SynchronizedStatement n ) {
 		n.body().accept( this );
 	}
 
-	@Override
 	public void visit( CurrentHandlerStatement n ) {}
 
-	@Override
 	public void visit( InstallFixedVariableExpressionNode n ) {}
 
-	@Override
 	public void visit( VariablePathNode n ) {}
 
-	@Override
 	public void visit( DocumentationComment n ) {}
 
-	@Override
 	public void visit( AddAssignStatement n ) {}
 
-	@Override
 	public void visit( SubtractAssignStatement n ) {}
 
-	@Override
 	public void visit( MultiplyAssignStatement n ) {}
 
-	@Override
 	public void visit( DivideAssignStatement n ) {}
 
-	@Override
 	public void visit( FreshValueExpressionNode n ) {}
 
-	@Override
 	public void visit( InterfaceExtenderDefinition n ) {}
 
-	@Override
 	public void visit( CourierDefinitionNode n ) {}
 
-	@Override
 	public void visit( CourierChoiceStatement n ) {}
 
-	@Override
 	public void visit( NotificationForwardStatement n ) {}
 
-	@Override
 	public void visit( InstanceOfExpressionNode n ) {}
 
-	@Override
 	public void visit( SolicitResponseForwardStatement n ) {
 		addOlSyntaxNodeToBehaviouralDependencies( n );
 	}
 
-	@Override
 	public void visit( InlineTreeExpressionNode n ) {}
 
-	@Override
 	public void visit( VoidExpressionNode n ) {}
 
-	@Override
 	public void visit( ProvideUntilStatement n ) {
 		n.provide().accept( this );
 		n.until().accept( this );
 	}
 
-	@Override
 	public void visit( TypeChoiceDefinition n ) {
 		List< TypeDefinition > list = types.computeIfAbsent( n.context().source(), k -> new LinkedList<>() );
 		list.add( n );
@@ -506,10 +423,8 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		}
 	}
 
-	@Override
 	public void visit( ImportStatement n ) {}
 
-	@Override
 	public void visit( ServiceNode n ) {
 		List< ServiceNode > list = serviceNodes.get( n.context().source() );
 		if( list == null ) {
@@ -521,20 +436,16 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		n.program().accept( this );
 	}
 
-	@Override
 	public void visit( EmbedServiceNode n ) {}
 
-	@Override
 	public void visit( SolicitResponseExpressionNode n ) {}
 
-	@Override
 	public void visit( IfExpressionNode n ) {
 		n.guard().accept( this );
 		n.thenExpression().accept( this );
 		n.elseExpression().accept( this );
 	}
 
-	@Override
 	public void visit( SelectExpressionNode n ) {
 		n.intoVariable().accept( this );
 		n.fromVariable().accept( this );
