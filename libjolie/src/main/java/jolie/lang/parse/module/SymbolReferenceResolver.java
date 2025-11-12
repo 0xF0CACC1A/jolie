@@ -112,7 +112,9 @@ import jolie.lang.parse.ast.expression.ConstantDoubleExpression;
 import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
+import jolie.lang.parse.ast.expression.CurrentValueNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
+import jolie.lang.parse.ast.expression.HasExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode.Operation;
@@ -334,6 +336,10 @@ public class SymbolReferenceResolver {
 		public void visit( ConstantLongExpression n ) {}
 
 		public void visit( ConstantStringExpression n ) {}
+
+		public void visit( CurrentValueNode n ) {}
+
+		public void visit( HasExpressionNode n ) {}
 
 		public void visit( ProductExpressionNode n ) {
 			for( Pair< OperandType, OLSyntaxNode > node : n.operands() ) {

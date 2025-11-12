@@ -125,6 +125,7 @@ import jolie.lang.parse.ast.expression.ConstantDoubleExpression;
 import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
+import jolie.lang.parse.ast.expression.CurrentValueNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
@@ -2517,10 +2518,8 @@ public class OLParser extends AbstractParser {
 			eat( Scanner.TokenType.FROM, "expected FROM after INTO variable" );
 			VariablePathNode fromVar = parseVariablePath();
 			eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
-			assertToken( Scanner.TokenType.STRING, "expected WHERE query string" );
-			String whereQuery = token.content().replaceAll( "\"", "" );
-			nextToken();
-			retVal = new SelectStatement( getContext(), selectQuery, intoVar, fromVar, whereQuery );
+			OLSyntaxNode whereExpr = parseExpression();
+			retVal = new SelectStatement( getContext(), selectQuery, intoVar, fromVar, whereExpr );
 			break;
 		case SYNCHRONIZED:
 			nextToken();
@@ -3579,6 +3578,12 @@ public class OLParser extends AbstractParser {
 					getContext(),
 					parseVariablePath() );
 				break;
+			case DOLLAR:
+				System.out.println( "DEBUG Parser: Found DOLLAR token, creating CurrentValueNode" );
+				retVal = new CurrentValueNode( getContext() );
+				nextToken();
+				System.out.println( "DEBUG Parser: CurrentValueNode created, nextToken called" );
+				break;
 			case INCREMENT:
 				nextToken();
 				retVal = new PreIncrementStatement( getContext(), parseVariablePath() );
@@ -3690,10 +3695,8 @@ public class OLParser extends AbstractParser {
 				eat( Scanner.TokenType.FROM, "expected FROM after INTO variable" );
 				VariablePathNode fromVar = parseVariablePath();
 				eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
-				assertToken( Scanner.TokenType.STRING, "expected WHERE query string" );
-				String whereQuery = token.content().replaceAll( "\"", "" );
-				nextToken();
-				retVal = new SelectExpressionNode( getContext(), selectQuery, intoVar, fromVar, whereQuery );
+				OLSyntaxNode whereExpr = parseExpression();
+				retVal = new SelectExpressionNode( getContext(), selectQuery, intoVar, fromVar, whereExpr );
 				break;
 			default:
 				break;

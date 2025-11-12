@@ -119,7 +119,9 @@ import jolie.lang.parse.ast.expression.ConstantDoubleExpression;
 import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
+import jolie.lang.parse.ast.expression.CurrentValueNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
+import jolie.lang.parse.ast.expression.HasExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
 import jolie.lang.parse.ast.expression.InstanceOfExpressionNode;
@@ -1433,6 +1435,16 @@ public class OOITBuilder implements UnitOLVisitor {
 	}
 
 	@Override
+	public void visit( CurrentValueNode n ) {
+		System.out.println( "DEBUG OOITBuilder: visit(CurrentValueNode) called!" );
+		currExpression = new jolie.runtime.expression.CurrentValueExpression();
+		System.out.println( "DEBUG OOITBuilder: currExpression set to " + currExpression.getClass().getName() );
+	}
+
+	@Override
+	public void visit( HasExpressionNode n ) {}
+
+	@Override
 	public void visit( ProductExpressionNode n ) {
 		Operand[] operands = new Operand[ n.operands().size() ];
 		int i = 0;
@@ -1489,7 +1501,7 @@ public class OOITBuilder implements UnitOLVisitor {
 			n.selectQuery(),
 			buildVariablePath( n.intoVariable() ),
 			buildVariablePath( n.fromVariable() ),
-			n.whereQuery() );
+			buildExpression( n.whereExpression() ) );
 	}
 
 	@Override
@@ -1726,7 +1738,7 @@ public class OOITBuilder implements UnitOLVisitor {
 			n.selectQuery(),
 			buildVariablePath( n.intoVariable() ),
 			buildVariablePath( n.fromVariable() ),
-			n.whereQuery() );
+			buildExpression( n.whereExpression() ) );
 	}
 
 	@Override

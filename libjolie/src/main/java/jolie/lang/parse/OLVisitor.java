@@ -270,4 +270,8 @@ public interface OLVisitor< C, R > {
 	R visit( IfExpressionNode n, C Ctx );
 
 	R visit( SelectExpressionNode n, C ctx );
+
+	R visit( CurrentValueNode n, C ctx );
+
+	R visit( HasExpressionNode n, C ctx );
 }

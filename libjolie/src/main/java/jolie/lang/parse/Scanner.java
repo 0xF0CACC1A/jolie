@@ -970,6 +970,8 @@ public class Scanner implements AutoCloseable {
 							retval = new Token( TokenType.PERCENT_SIGN );
 						} else if ( ch == '#' ) {
 							retval = new Token( TokenType.HASH );
+						} else if ( ch == '$' ) {
+							retval = new Token( TokenType.DOLLAR );
 						} else if ( ch == '^' ) {
 							retval = new Token( TokenType.CARET );
 						} else if ( ch == '?' ) {

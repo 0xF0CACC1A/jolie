@@ -54,4 +54,12 @@ public class CompareCondition implements Expression {
 	public Value evaluate() {
 		return Value.create( compareOperator.test( leftExpression.evaluate(), rightExpression.evaluate() ) );
 	}
+
+	public Expression leftExpression() {
+		return leftExpression;
+	}
+
+	public Expression rightExpression() {
+		return rightExpression;
+	}
 }

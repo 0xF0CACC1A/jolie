@@ -7,15 +7,15 @@ public class SelectStatement extends OLSyntaxNode {
 	private final String selectQuery;
 	private final VariablePathNode intoVariable;
 	private final VariablePathNode fromVariable;
-	private final String whereQuery;
+	private final OLSyntaxNode whereExpression;
 
 	public SelectStatement( ParsingContext context, String selectQuery,
-		VariablePathNode intoVariable, VariablePathNode fromVariable, String whereQuery ) {
+		VariablePathNode intoVariable, VariablePathNode fromVariable, OLSyntaxNode whereExpression ) {
 		super( context );
 		this.selectQuery = selectQuery;
 		this.intoVariable = intoVariable;
 		this.fromVariable = fromVariable;
-		this.whereQuery = whereQuery;
+		this.whereExpression = whereExpression;
 	}
 
 	public String selectQuery() {
@@ -30,8 +30,8 @@ public class SelectStatement extends OLSyntaxNode {
 		return fromVariable;
 	}
 
-	public String whereQuery() {
-		return whereQuery;
+	public OLSyntaxNode whereExpression() {
+		return whereExpression;
 	}
 
 	@Override

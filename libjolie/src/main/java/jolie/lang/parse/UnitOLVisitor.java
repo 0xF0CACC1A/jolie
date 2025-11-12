@@ -774,4 +774,20 @@ public interface UnitOLVisitor extends OLVisitor< Unit, Unit > {
 		visit( n );
 		return Unit.INSTANCE;
 	}
+
+	void visit( CurrentValueNode n );
+
+	@Override
+	default Unit visit( CurrentValueNode n, Unit ctx ) {
+		visit( n );
+		return Unit.INSTANCE;
+	}
+
+	void visit( HasExpressionNode n );
+
+	@Override
+	default Unit visit( HasExpressionNode n, Unit ctx ) {
+		visit( n );
+		return Unit.INSTANCE;
+	}
 }
