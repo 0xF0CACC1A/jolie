@@ -7,25 +7,19 @@ import jolie.lang.parse.context.ParsingContext;
 
 public class SelectExpressionNode extends OLSyntaxNode {
 	private final String selectQuery;
-	private final VariablePathNode intoVariable;
 	private final VariablePathNode fromVariable;
 	private final OLSyntaxNode whereExpression;
 
 	public SelectExpressionNode( ParsingContext context, String selectQuery,
-		VariablePathNode intoVariable, VariablePathNode fromVariable, OLSyntaxNode whereExpression ) {
+		VariablePathNode fromVariable, OLSyntaxNode whereExpression ) {
 		super( context );
 		this.selectQuery = selectQuery;
-		this.intoVariable = intoVariable;
 		this.fromVariable = fromVariable;
 		this.whereExpression = whereExpression;
 	}
 
 	public String selectQuery() {
 		return selectQuery;
-	}
-
-	public VariablePathNode intoVariable() {
-		return intoVariable;
 	}
 
 	public VariablePathNode fromVariable() {

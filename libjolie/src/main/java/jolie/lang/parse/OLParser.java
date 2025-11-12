@@ -2513,13 +2513,11 @@ public class OLParser extends AbstractParser {
 			assertToken( Scanner.TokenType.STRING, "expected SELECT query string" );
 			String selectQuery = token.content().replaceAll( "\"", "" );
 			nextToken();
-			eat( Scanner.TokenType.INTO, "expected INTO after SELECT expression" );
-			VariablePathNode intoVar = parseVariablePath();
-			eat( Scanner.TokenType.FROM, "expected FROM after INTO variable" );
+			eat( Scanner.TokenType.FROM, "expected FROM after SELECT query" );
 			VariablePathNode fromVar = parseVariablePath();
 			eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
 			OLSyntaxNode whereExpr = parseExpression();
-			retVal = new SelectStatement( getContext(), selectQuery, intoVar, fromVar, whereExpr );
+			retVal = new SelectStatement( getContext(), selectQuery, fromVar, whereExpr );
 			break;
 		case SYNCHRONIZED:
 			nextToken();
@@ -3579,10 +3577,8 @@ public class OLParser extends AbstractParser {
 					parseVariablePath() );
 				break;
 			case DOLLAR:
-				System.out.println( "DEBUG Parser: Found DOLLAR token, creating CurrentValueNode" );
 				retVal = new CurrentValueNode( getContext() );
 				nextToken();
-				System.out.println( "DEBUG Parser: CurrentValueNode created, nextToken called" );
 				break;
 			case INCREMENT:
 				nextToken();
@@ -3690,13 +3686,11 @@ public class OLParser extends AbstractParser {
 				assertToken( Scanner.TokenType.STRING, "expected SELECT query string" );
 				String selectQuery = token.content().replaceAll( "\"", "" );
 				nextToken();
-				eat( Scanner.TokenType.INTO, "expected INTO after SELECT expression" );
-				VariablePathNode intoVar = parseVariablePath();
-				eat( Scanner.TokenType.FROM, "expected FROM after INTO variable" );
+				eat( Scanner.TokenType.FROM, "expected FROM after SELECT query" );
 				VariablePathNode fromVar = parseVariablePath();
 				eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
 				OLSyntaxNode whereExpr = parseExpression();
-				retVal = new SelectExpressionNode( getContext(), selectQuery, intoVar, fromVar, whereExpr );
+				retVal = new SelectExpressionNode( getContext(), selectQuery, fromVar, whereExpr );
 				break;
 			default:
 				break;

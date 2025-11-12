@@ -12,14 +12,12 @@ import java.util.ArrayList;
 
 public class SelectProcess implements Process {
 	private final String selectQuery;
-	private final VariablePath intoVariable;
 	private final VariablePath fromVariable;
 	private final Expression whereExpression;
 
-	public SelectProcess( String selectQuery, VariablePath intoVariable,
+	public SelectProcess( String selectQuery,
 		VariablePath fromVariable, Expression whereExpression ) {
 		this.selectQuery = selectQuery;
-		this.intoVariable = intoVariable;
 		this.fromVariable = fromVariable;
 		this.whereExpression = whereExpression;
 	}
@@ -28,7 +26,6 @@ public class SelectProcess implements Process {
 	public Process copy( TransformationReason reason ) {
 		return new SelectProcess(
 			selectQuery,
-			(VariablePath) intoVariable.cloneExpression( reason ),
 			(VariablePath) fromVariable.cloneExpression( reason ),
 			whereExpression.cloneExpression( reason ) );
 	}
@@ -50,31 +47,24 @@ public class SelectProcess implements Process {
 			rootPath );
 
 		// Filter candidates using native Jolie WHERE expression
+		// Note: SELECT as a statement (without <<) has no effect since there's no INTO variable
+		// Use SELECT as an expression with << operator for meaningful results
 		List< String > matchingPaths = new ArrayList<>();
 		CurrentValueExpression currentValueExpr = findCurrentValueExpression( whereExpression );
-		System.out.println( "DEBUG: whereExpression class = " + whereExpression.getClass().getName() );
-		System.out.println( "DEBUG: currentValueExpr = " + currentValueExpr );
-		System.out.println( "DEBUG: candidatePaths = " + candidatePaths );
 
 		for( String path : candidatePaths ) {
 			Value candidateValue = getValueAtPath( vec, path, rootPath );
-			System.out.println( "DEBUG: Checking path=" + path + ", value=" + candidateValue.intValue() );
 			if( currentValueExpr != null ) {
 				currentValueExpr.setCurrentNode( candidateValue );
-				System.out.println( "DEBUG: Set currentNode to " + candidateValue.intValue() );
 			}
 
 			Value whereResult = whereExpression.evaluate();
-			System.out.println( "DEBUG: WHERE result = " + whereResult.boolValue() );
 			if( whereResult.boolValue() ) {
 				matchingPaths.add( path );
 			}
 		}
 
-		// Store results
-		for( int i = 0; i < matchingPaths.size(); i++ ) {
-			intoVariable.getValueVector().get( i ).setValue( matchingPaths.get( i ) );
-		}
+		// Results are computed but not stored (use SELECT expression with << instead)
 	}
 
 	private CurrentValueExpression findCurrentValueExpression( Expression expr ) {
@@ -84,22 +74,16 @@ public class SelectProcess implements Process {
 		// For comparison expressions, check operands
 		if( expr instanceof jolie.runtime.expression.CompareCondition ) {
 			jolie.runtime.expression.CompareCondition cmp = (jolie.runtime.expression.CompareCondition) expr;
-			System.out.println( "DEBUG: Found CompareCondition" );
-			System.out.println( "DEBUG: left = " + cmp.leftExpression().getClass().getName() );
-			System.out.println( "DEBUG: right = " + cmp.rightExpression().getClass().getName() );
 			// Check left operand
 			if( cmp.leftExpression() instanceof CurrentValueExpression ) {
-				System.out.println( "DEBUG: Found CurrentValueExpression on left" );
 				return (CurrentValueExpression) cmp.leftExpression();
 			}
 			// Check right operand
 			if( cmp.rightExpression() instanceof CurrentValueExpression ) {
-				System.out.println( "DEBUG: Found CurrentValueExpression on right" );
 				return (CurrentValueExpression) cmp.rightExpression();
 			}
 		}
 		// For other composite expressions, would need more traversal
-		System.out.println( "DEBUG: CurrentValueExpression not found, returning null" );
 		return null;
 	}
 

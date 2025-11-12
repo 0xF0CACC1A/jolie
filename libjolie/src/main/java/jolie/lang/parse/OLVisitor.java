@@ -272,6 +272,4 @@ public interface OLVisitor< C, R > {
 	R visit( SelectExpressionNode n, C ctx );
 
 	R visit( CurrentValueNode n, C ctx );
-
-	R visit( HasExpressionNode n, C ctx );
 }

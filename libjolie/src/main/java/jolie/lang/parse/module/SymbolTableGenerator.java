@@ -92,7 +92,6 @@ import jolie.lang.parse.ast.courier.NotificationForwardStatement;
 import jolie.lang.parse.ast.courier.SolicitResponseForwardStatement;
 import jolie.lang.parse.ast.expression.*;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
-import jolie.lang.parse.ast.expression.HasExpressionNode;
 import jolie.lang.parse.ast.types.TypeChoiceDefinition;
 import jolie.lang.parse.ast.types.TypeDefinition;
 import jolie.lang.parse.ast.types.TypeDefinitionLink;
@@ -196,7 +195,6 @@ public class SymbolTableGenerator {
 
 		public void visit( CurrentValueNode n ) {}
 
-		public void visit( HasExpressionNode n ) {}
 
 		public void visit( ProductExpressionNode n ) {}
 
@@ -298,7 +296,6 @@ public class SymbolTableGenerator {
 		}
 
 		public void visit( SelectExpressionNode n ) {
-			n.intoVariable().accept( this );
 			n.fromVariable().accept( this );
 		}
 

@@ -116,7 +116,6 @@ import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
-import jolie.lang.parse.ast.expression.HasExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
 import jolie.lang.parse.ast.expression.InstanceOfExpressionNode;
@@ -977,7 +976,6 @@ public class SemanticVerifier implements UnitOLVisitor {
 
 	@Override
 	public void visit( SelectExpressionNode n ) {
-		n.intoVariable().accept( this );
 		n.fromVariable().accept( this );
 		n.whereExpression().accept( this );
 	}
@@ -1068,9 +1066,6 @@ public class SemanticVerifier implements UnitOLVisitor {
 
 	@Override
 	public void visit( CurrentValueNode n ) {}
-
-	@Override
-	public void visit( HasExpressionNode n ) {}
 
 	@Override
 	public void visit( ProductExpressionNode n ) {
@@ -1223,8 +1218,7 @@ public class SemanticVerifier implements UnitOLVisitor {
 
 	@Override
 	public void visit( SelectStatement n ) {
-		// Visit variable paths and WHERE expression
-		n.intoVariable().accept( this );
+		// Visit variable path and WHERE expression
 		n.fromVariable().accept( this );
 		n.whereExpression().accept( this );
 	}

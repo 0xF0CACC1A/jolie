@@ -10,14 +10,12 @@ import java.util.ArrayList;
 
 public class SelectExpression implements Expression {
 	private final String selectQuery;
-	private final VariablePath intoVariable;
 	private final VariablePath fromVariable;
 	private final Expression whereExpression;
 
-	public SelectExpression( String selectQuery, VariablePath intoVariable,
+	public SelectExpression( String selectQuery,
 		VariablePath fromVariable, Expression whereExpression ) {
 		this.selectQuery = selectQuery;
-		this.intoVariable = intoVariable;
 		this.fromVariable = fromVariable;
 		this.whereExpression = whereExpression;
 	}
@@ -26,7 +24,6 @@ public class SelectExpression implements Expression {
 	public Expression cloneExpression( TransformationReason reason ) {
 		return new SelectExpression(
 			selectQuery,
-			(VariablePath) intoVariable.cloneExpression( reason ),
 			(VariablePath) fromVariable.cloneExpression( reason ),
 			whereExpression.cloneExpression( reason ) );
 	}
@@ -60,15 +57,10 @@ public class SelectExpression implements Expression {
 			}
 		}
 
-		// Store results in INTO variable
-		for( int i = 0; i < matchingPaths.size(); i++ ) {
-			intoVariable.getValueVector().get( i ).setValue( matchingPaths.get( i ) );
-		}
-
-		// Return as Value
+		// Return results as Value array
 		Value result = Value.create();
 		for( int i = 0; i < matchingPaths.size(); i++ ) {
-			result.getChildren( "result" ).get( i ).setValue( matchingPaths.get( i ) );
+			result.getChildren( "results" ).get( i ).setValue( matchingPaths.get( i ) );
 		}
 		return result;
 	}

@@ -99,7 +99,6 @@ import jolie.lang.parse.ast.courier.NotificationForwardStatement;
 import jolie.lang.parse.ast.courier.SolicitResponseForwardStatement;
 import jolie.lang.parse.ast.expression.*;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
-import jolie.lang.parse.ast.expression.HasExpressionNode;
 import jolie.lang.parse.ast.types.TypeChoiceDefinition;
 import jolie.lang.parse.ast.types.TypeDefinitionLink;
 import jolie.lang.parse.ast.types.TypeInlineDefinition;
@@ -670,7 +669,6 @@ public class TypeChecker implements UnitOLVisitor {
 	}
 
 	public void visit( SelectExpressionNode n ) {
-		n.intoVariable().accept( this );
 		n.fromVariable().accept( this );
 	}
 
@@ -759,7 +757,6 @@ public class TypeChecker implements UnitOLVisitor {
 
 	public void visit( CurrentValueNode n ) {}
 
-	public void visit( HasExpressionNode n ) {}
 
 	public void visit( ProductExpressionNode n ) {}
 

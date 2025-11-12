@@ -99,7 +99,6 @@ import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
-import jolie.lang.parse.ast.expression.HasExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
 import jolie.lang.parse.ast.expression.InstanceOfExpressionNode;
@@ -657,9 +656,6 @@ public class OLParseTreeOptimizer {
 		}
 
 		@Override
-		public void visit( HasExpressionNode n ) {}
-
-		@Override
 		public void visit( ProductExpressionNode n ) {
 			if( n.operands().size() > 1 ) {
 				ProductExpressionNode ret = new ProductExpressionNode( n.context() );
@@ -757,7 +753,6 @@ public class OLParseTreeOptimizer {
 		@Override
 		public void visit( SelectExpressionNode n ) {
 			currNode = new SelectExpressionNode( n.context(), n.selectQuery(),
-				(VariablePathNode) optimizeNode( n.intoVariable() ),
 				(VariablePathNode) optimizeNode( n.fromVariable() ),
 				optimizeNode( n.whereExpression() ) );
 		}
@@ -802,7 +797,6 @@ public class OLParseTreeOptimizer {
 			currNode = new SelectStatement(
 				n.context(),
 				n.selectQuery(),
-				optimizePath( n.intoVariable() ),
 				optimizePath( n.fromVariable() ),
 				optimizeNode( n.whereExpression() ) );
 		}
