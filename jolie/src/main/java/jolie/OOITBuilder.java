@@ -1436,7 +1436,9 @@ public class OOITBuilder implements UnitOLVisitor {
 
 	@Override
 	public void visit( CurrentValueNode n ) {
-		currExpression = new jolie.runtime.expression.CurrentValueExpression();
+		currExpression = n.fieldPath().isEmpty()
+			? new jolie.runtime.expression.CurrentValueExpression()
+			: new jolie.runtime.expression.CurrentValueExpression( n.fieldPath() );
 	}
 
 	@Override

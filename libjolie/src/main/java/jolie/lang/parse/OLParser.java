@@ -2512,7 +2512,7 @@ public class OLParser extends AbstractParser {
 		case SELECT:
 			nextToken();
 
-			// Native syntax: select var.* where ...
+			// Native syntax: select var where ... OR select var.* where ...
 			assertIdentifier( "expected variable name after SELECT" );
 			String varId = token.content();
 			nextToken();
@@ -2521,13 +2521,18 @@ public class OLParser extends AbstractParser {
 			VariablePathNode baseVar = new VariablePathNode( getContext(), Type.NORMAL );
 			baseVar.append( new Pair<>( new ConstantStringExpression( getContext(), varId ), null ) );
 
-			// Check for DOT
-			eat( Scanner.TokenType.DOT, "expected . after variable in SELECT" );
+			boolean isWildcard = false;
 
-			// Check for ASTERISK (*)
-			eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
+			// Check if there's a DOT (for wildcard syntax var.*)
+			if( token.is( Scanner.TokenType.DOT ) ) {
+				nextToken(); // eat DOT
 
-			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, true );
+				// Must be followed by ASTERISK
+				eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
+				isWildcard = true;
+			}
+
+			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, isWildcard );
 
 			eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 
@@ -3593,8 +3598,20 @@ public class OLParser extends AbstractParser {
 					parseVariablePath() );
 				break;
 			case DOLLAR:
-				retVal = new CurrentValueNode( getContext() );
-				nextToken();
+				nextToken(); // eat DOLLAR
+
+				// Check if there's a field path after $ (e.g., $.field or $.field.subfield)
+				List< String > fieldPath = new ArrayList<>();
+				while( token.is( Scanner.TokenType.DOT ) ) {
+					nextToken(); // eat DOT
+					assertIdentifier( "expected field name after . in $ expression" );
+					fieldPath.add( token.content() );
+					nextToken(); // eat field name
+				}
+
+				retVal = fieldPath.isEmpty()
+					? new CurrentValueNode( getContext() )
+					: new CurrentValueNode( getContext(), fieldPath );
 				break;
 			case INCREMENT:
 				nextToken();
@@ -3700,7 +3717,7 @@ public class OLParser extends AbstractParser {
 			case SELECT:
 				nextToken();
 
-				// Native syntax: select var.* where ...
+				// Native syntax: select var where ... OR select var.* where ...
 				assertIdentifier( "expected variable name after SELECT" );
 				String varIdExpr = token.content();
 				nextToken();
@@ -3709,13 +3726,18 @@ public class OLParser extends AbstractParser {
 				VariablePathNode baseVarExpr = new VariablePathNode( getContext(), Type.NORMAL );
 				baseVarExpr.append( new Pair<>( new ConstantStringExpression( getContext(), varIdExpr ), null ) );
 
-				// Check for DOT
-				eat( Scanner.TokenType.DOT, "expected . after variable in SELECT expression" );
+				boolean isWildcardExpr = false;
 
-				// Check for ASTERISK (*)
-				eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
+				// Check if there's a DOT (for wildcard syntax var.*)
+				if( token.is( Scanner.TokenType.DOT ) ) {
+					nextToken(); // eat DOT
 
-				SelectPathNode selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, true );
+					// Must be followed by ASTERISK
+					eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
+					isWildcardExpr = true;
+				}
+
+				SelectPathNode selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, isWildcardExpr );
 
 				eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 

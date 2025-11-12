@@ -43,6 +43,10 @@ tests = [
     ("test_native_greater_than.ol", ["items.c", "items.b"]),
     ("test_native_string_match.ol", ["fruits.c", "fruits.a"]),
     ("test_native_not_equal.ol", ["vals.c", "vals.a"]),
+    ("test_select_single.ol", ["myvar"]),
+    ("test_select_single_no_match.ol", []),
+    ("test_dollar_field.ol", ["tree.c", "tree.b"]),
+    ("test_dollar_nested_field.ol", ["items.c"]),
 ]
 
 # Run tests
