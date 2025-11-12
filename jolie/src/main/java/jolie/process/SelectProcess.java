@@ -11,22 +11,22 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class SelectProcess implements Process {
-	private final String selectQuery;
-	private final VariablePath fromVariable;
+	private final VariablePath selectPath;
+	private final boolean isWildcard;
 	private final Expression whereExpression;
 
-	public SelectProcess( String selectQuery,
-		VariablePath fromVariable, Expression whereExpression ) {
-		this.selectQuery = selectQuery;
-		this.fromVariable = fromVariable;
+	public SelectProcess( VariablePath selectPath, boolean isWildcard,
+		Expression whereExpression ) {
+		this.selectPath = selectPath;
+		this.isWildcard = isWildcard;
 		this.whereExpression = whereExpression;
 	}
 
 	@Override
 	public Process copy( TransformationReason reason ) {
 		return new SelectProcess(
-			selectQuery,
-			(VariablePath) fromVariable.cloneExpression( reason ),
+			(VariablePath) selectPath.cloneExpression( reason ),
+			isWildcard,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -35,9 +35,12 @@ public class SelectProcess implements Process {
 		if( ExecutionThread.currentThread().isKilled() )
 			return;
 
-		String rootPath = extractRootPath( fromVariable );
-		ValueVector vec = fromVariable.getValueVector();
+		String rootPath = extractRootPath( selectPath );
+		ValueVector vec = selectPath.getValueVector();
 		Object source = vec.size() > 1 ? vec : vec.first();
+
+		// Convert native path to ANTLR query string (for now, only wildcard supported)
+		String selectQuery = isWildcard ? "$.*" : "$";
 
 		// Execute SELECT query without WHERE filtering (pass null to match all)
 		List< String > candidatePaths = SelectQueryExecutor.execute(

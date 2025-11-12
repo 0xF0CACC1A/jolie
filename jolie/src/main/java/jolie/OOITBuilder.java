@@ -129,6 +129,7 @@ import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
 import jolie.lang.parse.ast.expression.SelectExpressionNode;
+import jolie.lang.parse.ast.expression.SelectPathNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -1492,9 +1493,15 @@ public class OOITBuilder implements UnitOLVisitor {
 	@Override
 	public void visit( SelectExpressionNode n ) {
 		currExpression = new SelectExpression(
-			n.selectQuery(),
-			buildVariablePath( n.fromVariable() ),
+			buildVariablePath( n.selectPath().baseVariable() ),
+			n.selectPath().isWildcard(),
 			buildExpression( n.whereExpression() ) );
+	}
+
+	@Override
+	public void visit( SelectPathNode n ) {
+		// SelectPathNode is handled inline in SelectStatement/SelectExpressionNode visitors
+		// No runtime representation needed for SelectPathNode itself
 	}
 
 	@Override
@@ -1728,8 +1735,8 @@ public class OOITBuilder implements UnitOLVisitor {
 	@Override
 	public void visit( SelectStatement n ) {
 		currProcess = new SelectProcess(
-			n.selectQuery(),
-			buildVariablePath( n.fromVariable() ),
+			buildVariablePath( n.selectPath().baseVariable() ),
+			n.selectPath().isWildcard(),
 			buildExpression( n.whereExpression() ) );
 	}
 

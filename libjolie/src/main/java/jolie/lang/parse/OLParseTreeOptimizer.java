@@ -98,6 +98,7 @@ import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
+import jolie.lang.parse.ast.expression.SelectPathNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
@@ -752,8 +753,8 @@ public class OLParseTreeOptimizer {
 
 		@Override
 		public void visit( SelectExpressionNode n ) {
-			currNode = new SelectExpressionNode( n.context(), n.selectQuery(),
-				(VariablePathNode) optimizeNode( n.fromVariable() ),
+			currNode = new SelectExpressionNode( n.context(),
+				(SelectPathNode) optimizeNode( n.selectPath() ),
 				optimizeNode( n.whereExpression() ) );
 		}
 
@@ -796,9 +797,17 @@ public class OLParseTreeOptimizer {
 		public void visit( SelectStatement n ) {
 			currNode = new SelectStatement(
 				n.context(),
-				n.selectQuery(),
-				optimizePath( n.fromVariable() ),
+				(SelectPathNode) optimizeNode( n.selectPath() ),
 				optimizeNode( n.whereExpression() ) );
+		}
+
+		@Override
+		public void visit( SelectPathNode n ) {
+			// For now, SelectPathNode doesn't need optimization - just preserve it
+			currNode = new SelectPathNode(
+				n.context(),
+				optimizePath( n.baseVariable() ),
+				n.isWildcard() );
 		}
 
 		@Override

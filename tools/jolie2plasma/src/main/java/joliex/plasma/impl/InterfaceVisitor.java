@@ -90,6 +90,7 @@ import jolie.lang.parse.ast.courier.NotificationForwardStatement;
 import jolie.lang.parse.ast.courier.SolicitResponseForwardStatement;
 import jolie.lang.parse.ast.expression.*;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
+import jolie.lang.parse.ast.expression.SelectPathNode;
 import jolie.lang.parse.ast.types.TypeChoiceDefinition;
 import jolie.lang.parse.ast.types.TypeDefinitionLink;
 import jolie.lang.parse.ast.types.TypeInlineDefinition;
@@ -192,6 +193,9 @@ public class InterfaceVisitor implements UnitOLVisitor {
 	public void visit( ConstantLongExpression n ) {}
 
 	public void visit( CurrentValueNode n ) {}
+
+	@Override
+	public void visit( SelectPathNode n ) {}
 
 
 	public void visit( ProductExpressionNode n ) {}

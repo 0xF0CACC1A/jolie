@@ -9,30 +9,33 @@ import java.util.List;
 import java.util.ArrayList;
 
 public class SelectExpression implements Expression {
-	private final String selectQuery;
-	private final VariablePath fromVariable;
+	private final VariablePath selectPath;
+	private final boolean isWildcard;
 	private final Expression whereExpression;
 
-	public SelectExpression( String selectQuery,
-		VariablePath fromVariable, Expression whereExpression ) {
-		this.selectQuery = selectQuery;
-		this.fromVariable = fromVariable;
+	public SelectExpression( VariablePath selectPath, boolean isWildcard,
+		Expression whereExpression ) {
+		this.selectPath = selectPath;
+		this.isWildcard = isWildcard;
 		this.whereExpression = whereExpression;
 	}
 
 	@Override
 	public Expression cloneExpression( TransformationReason reason ) {
 		return new SelectExpression(
-			selectQuery,
-			(VariablePath) fromVariable.cloneExpression( reason ),
+			(VariablePath) selectPath.cloneExpression( reason ),
+			isWildcard,
 			whereExpression.cloneExpression( reason ) );
 	}
 
 	@Override
 	public Value evaluate() {
-		String rootPath = extractRootPath( fromVariable );
-		ValueVector vec = fromVariable.getValueVector();
+		String rootPath = extractRootPath( selectPath );
+		ValueVector vec = selectPath.getValueVector();
 		Object source = vec.size() > 1 ? vec : vec.first();
+
+		// Convert native path to ANTLR query string (for now, only wildcard supported)
+		String selectQuery = isWildcard ? "$.*" : "$";
 
 		// Execute SELECT query without WHERE filtering (pass null to match all)
 		List< String > candidatePaths = SelectQueryExecutor.execute(
