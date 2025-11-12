@@ -8,7 +8,7 @@ main {
     vals.b = 2;
     vals.c = 3;
 
-    res << select vals.* from vals where $ != 2;
+    res << select vals.* where $ != 2;
 
     i = 0;
     while( i < #res.results ) {

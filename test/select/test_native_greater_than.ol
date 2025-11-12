@@ -8,7 +8,7 @@ main {
     items.b = 15;
     items.c = 20;
 
-    res << select items.* from items where $ > 10;
+    res << select items.* where $ > 10;
 
     i = 0;
     while( i < #res.results ) {

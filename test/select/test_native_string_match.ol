@@ -8,7 +8,7 @@ main {
     fruits.b = "banana";
     fruits.c = "apple";
 
-    res << select fruits.* from fruits where $ == "apple";
+    res << select fruits.* where $ == "apple";
 
     i = 0;
     while( i < #res.results ) {

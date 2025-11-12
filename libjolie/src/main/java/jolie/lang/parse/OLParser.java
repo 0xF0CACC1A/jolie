@@ -2512,51 +2512,24 @@ public class OLParser extends AbstractParser {
 		case SELECT:
 			nextToken();
 
-			SelectPathNode selectPath;
-			VariablePathNode fromVar;
+			// Native syntax: select var.* where ...
+			assertIdentifier( "expected variable name after SELECT" );
+			String varId = token.content();
+			nextToken();
 
-			// Check if old ANTLR string syntax or new native syntax
-			if( token.is( Scanner.TokenType.STRING ) ) {
-				// Old syntax: select "$.*" into results from var where ...
-				// For now, we ignore the ANTLR string and parse FROM variable
-				nextToken(); // eat the string
+			// Create simple VariablePathNode with just the base variable
+			VariablePathNode baseVar = new VariablePathNode( getContext(), Type.NORMAL );
+			baseVar.append( new Pair<>( new ConstantStringExpression( getContext(), varId ), null ) );
 
-				// Check for INTO (old syntax with INTO clause)
-				if( token.is( Scanner.TokenType.INTO ) ) {
-					nextToken();
-					assertIdentifier( "expected variable name after INTO" );
-					nextToken(); // eat the into variable (we ignore it now with << operator)
-				}
+			// Check for DOT
+			eat( Scanner.TokenType.DOT, "expected . after variable in SELECT" );
 
-				eat( Scanner.TokenType.FROM, "expected FROM after SELECT query" );
-				fromVar = parseVariablePath();
+			// Check for ASTERISK (*)
+			eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
 
-				// Create SelectPathNode with wildcard (assume "$.*" for now)
-				selectPath = new SelectPathNode( getContext(), fromVar, true );
-			} else {
-				// New native syntax: select var.* from var where ...
-				assertIdentifier( "expected variable name after SELECT" );
-				String varId = token.content();
-				nextToken();
+			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, true );
 
-				// Create simple VariablePathNode with just the base variable
-				VariablePathNode baseVar = new VariablePathNode( getContext(), Type.NORMAL );
-				baseVar.append( new Pair<>( new ConstantStringExpression( getContext(), varId ), null ) );
-
-				// Check for DOT
-				eat( Scanner.TokenType.DOT, "expected . after variable in SELECT" );
-
-				// Check for ASTERISK (*)
-				eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
-
-				selectPath = new SelectPathNode( getContext(), baseVar, true );
-
-				eat( Scanner.TokenType.FROM, "expected FROM after SELECT path" );
-
-				parseVariablePath(); // Parse but ignore - FROM is now useless
-			}
-
-			eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
+			eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 
 			OLSyntaxNode whereExpr = parseExpression();
 
@@ -3727,43 +3700,24 @@ public class OLParser extends AbstractParser {
 			case SELECT:
 				nextToken();
 
-				SelectPathNode selectPathExpr;
-				VariablePathNode fromVarExpr;
+				// Native syntax: select var.* where ...
+				assertIdentifier( "expected variable name after SELECT" );
+				String varIdExpr = token.content();
+				nextToken();
 
-				// Check if old ANTLR string syntax or new native syntax
-				if( token.is( Scanner.TokenType.STRING ) ) {
-					// Old syntax: select "$.*" from var where ...
-					nextToken(); // eat the string
+				// Create simple VariablePathNode with just the base variable
+				VariablePathNode baseVarExpr = new VariablePathNode( getContext(), Type.NORMAL );
+				baseVarExpr.append( new Pair<>( new ConstantStringExpression( getContext(), varIdExpr ), null ) );
 
-					eat( Scanner.TokenType.FROM, "expected FROM after SELECT query" );
-					fromVarExpr = parseVariablePath();
+				// Check for DOT
+				eat( Scanner.TokenType.DOT, "expected . after variable in SELECT expression" );
 
-					// Create SelectPathNode with wildcard (assume "$.*" for now)
-					selectPathExpr = new SelectPathNode( getContext(), fromVarExpr, true );
-				} else {
-					// New native syntax: select var.* from var where ...
-					assertIdentifier( "expected variable name after SELECT" );
-					String varIdExpr = token.content();
-					nextToken();
+				// Check for ASTERISK (*)
+				eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
 
-					// Create simple VariablePathNode with just the base variable
-					VariablePathNode baseVarExpr = new VariablePathNode( getContext(), Type.NORMAL );
-					baseVarExpr.append( new Pair<>( new ConstantStringExpression( getContext(), varIdExpr ), null ) );
+				SelectPathNode selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, true );
 
-					// Check for DOT
-					eat( Scanner.TokenType.DOT, "expected . after variable in SELECT expression" );
-
-					// Check for ASTERISK (*)
-					eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
-
-					selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, true );
-
-					eat( Scanner.TokenType.FROM, "expected FROM after SELECT path" );
-
-					parseVariablePath(); // Parse but ignore - FROM is now useless
-				}
-
-				eat( Scanner.TokenType.WHERE, "expected WHERE after FROM variable" );
+				eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 
 				OLSyntaxNode whereExprNode = parseExpression();
 

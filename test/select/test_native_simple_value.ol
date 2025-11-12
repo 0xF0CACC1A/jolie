@@ -8,7 +8,7 @@ main {
     data.y = 200;
     data.z = 100;
 
-    res << select data.* from data where $ == 100;
+    res << select data.* where $ == 100;
 
     i = 0;
     while( i < #res.results ) {
