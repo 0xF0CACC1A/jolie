@@ -2512,7 +2512,7 @@ public class OLParser extends AbstractParser {
 		case SELECT:
 			nextToken();
 
-			// Native syntax: select var where ... OR select var.* where ... OR select var.*.* where ...
+			// Native syntax: select var where ... OR select var.* where ... OR select var..field where ...
 			assertIdentifier( "expected variable name after SELECT" );
 			String varId = token.content();
 			nextToken();
@@ -2522,17 +2522,32 @@ public class OLParser extends AbstractParser {
 			baseVar.append( new Pair<>( new ConstantStringExpression( getContext(), varId ), null ) );
 
 			int wildcardDepth = 0;
+			String recursiveField = null;
 
-			// Count wildcard levels (e.g., .* is 1, .*.* is 2)
-			while( token.is( Scanner.TokenType.DOT ) ) {
-				nextToken(); // eat DOT
+			// Check for wildcards (.*, .*.*) or recursive descent (..field)
+			if( token.is( Scanner.TokenType.DOT ) ) {
+				nextToken(); // eat first DOT
 
-				// Must be followed by ASTERISK
-				eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
-				wildcardDepth++;
+				if( token.is( Scanner.TokenType.DOT ) ) {
+					// Recursive descent: var..field
+					nextToken(); // eat second DOT
+					assertIdentifier( "expected field name after .. in SELECT" );
+					recursiveField = token.content();
+					nextToken(); // eat field name
+				} else {
+					// Wildcard path: count levels (.*, .*.*)
+					eat( Scanner.TokenType.ASTERISK, "expected * or . after first . in SELECT" );
+					wildcardDepth++;
+
+					while( token.is( Scanner.TokenType.DOT ) ) {
+						nextToken(); // eat DOT
+						eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
+						wildcardDepth++;
+					}
+				}
 			}
 
-			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, wildcardDepth );
+			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, wildcardDepth, recursiveField );
 
 			eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 
@@ -3600,18 +3615,37 @@ public class OLParser extends AbstractParser {
 			case DOLLAR:
 				nextToken(); // eat DOLLAR
 
-				// Check if there's a field path after $ (e.g., $.field or $.field.subfield)
-				List< String > fieldPath = new ArrayList<>();
-				while( token.is( Scanner.TokenType.DOT ) ) {
-					nextToken(); // eat DOT
-					assertIdentifier( "expected field name after . in $ expression" );
-					fieldPath.add( token.content() );
-					nextToken(); // eat field name
-				}
+				// Check for field path ($.field) or recursive field ($..field)
+				if( token.is( Scanner.TokenType.DOT ) ) {
+					nextToken(); // eat first DOT
 
-				retVal = fieldPath.isEmpty()
-					? new CurrentValueNode( getContext() )
-					: new CurrentValueNode( getContext(), fieldPath );
+					if( token.is( Scanner.TokenType.DOT ) ) {
+						// Recursive field: $..field
+						nextToken(); // eat second DOT
+						assertIdentifier( "expected field name after .. in $ expression" );
+						String recursiveFieldName = token.content();
+						nextToken(); // eat field name
+						retVal = new CurrentValueNode( getContext(), recursiveFieldName );
+					} else {
+						// Regular field path: $.field or $.field.subfield
+						List< String > fieldPath = new ArrayList<>();
+						assertIdentifier( "expected field name after . in $ expression" );
+						fieldPath.add( token.content() );
+						nextToken(); // eat field name
+
+						while( token.is( Scanner.TokenType.DOT ) ) {
+							nextToken(); // eat DOT
+							assertIdentifier( "expected field name after . in $ expression" );
+							fieldPath.add( token.content() );
+							nextToken(); // eat field name
+						}
+
+						retVal = new CurrentValueNode( getContext(), fieldPath );
+					}
+				} else {
+					// Just $ with no field access
+					retVal = new CurrentValueNode( getContext() );
+				}
 				break;
 			case INCREMENT:
 				nextToken();
@@ -3717,7 +3751,7 @@ public class OLParser extends AbstractParser {
 			case SELECT:
 				nextToken();
 
-				// Native syntax: select var where ... OR select var.* where ... OR select var.*.* where ...
+				// Native syntax: select var where ... OR select var.* where ... OR select var..field where ...
 				assertIdentifier( "expected variable name after SELECT" );
 				String varIdExpr = token.content();
 				nextToken();
@@ -3727,17 +3761,33 @@ public class OLParser extends AbstractParser {
 				baseVarExpr.append( new Pair<>( new ConstantStringExpression( getContext(), varIdExpr ), null ) );
 
 				int wildcardDepthExpr = 0;
+				String recursiveFieldExpr = null;
 
-				// Count wildcard levels (e.g., .* is 1, .*.* is 2)
-				while( token.is( Scanner.TokenType.DOT ) ) {
-					nextToken(); // eat DOT
+				// Check for wildcards (.*, .*.*) or recursive descent (..field)
+				if( token.is( Scanner.TokenType.DOT ) ) {
+					nextToken(); // eat first DOT
 
-					// Must be followed by ASTERISK
-					eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
-					wildcardDepthExpr++;
+					if( token.is( Scanner.TokenType.DOT ) ) {
+						// Recursive descent: var..field
+						nextToken(); // eat second DOT
+						assertIdentifier( "expected field name after .. in SELECT expression" );
+						recursiveFieldExpr = token.content();
+						nextToken(); // eat field name
+					} else {
+						// Wildcard path: count levels (.*, .*.*)
+						eat( Scanner.TokenType.ASTERISK, "expected * or . after first . in SELECT expression" );
+						wildcardDepthExpr++;
+
+						while( token.is( Scanner.TokenType.DOT ) ) {
+							nextToken(); // eat DOT
+							eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
+							wildcardDepthExpr++;
+						}
+					}
 				}
 
-				SelectPathNode selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, wildcardDepthExpr );
+				SelectPathNode selectPathExpr =
+					new SelectPathNode( getContext(), baseVarExpr, wildcardDepthExpr, recursiveFieldExpr );
 
 				eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 

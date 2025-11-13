@@ -807,7 +807,8 @@ public class OLParseTreeOptimizer {
 			currNode = new SelectPathNode(
 				n.context(),
 				optimizePath( n.baseVariable() ),
-				n.wildcardDepth() );
+				n.wildcardDepth(),
+				n.recursiveField() );
 		}
 
 		@Override

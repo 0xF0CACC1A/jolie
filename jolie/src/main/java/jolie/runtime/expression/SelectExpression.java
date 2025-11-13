@@ -11,12 +11,19 @@ import java.util.ArrayList;
 public class SelectExpression implements Expression {
 	private final VariablePath selectPath;
 	private final int wildcardDepth;
+	private final String recursiveField;
 	private final Expression whereExpression;
 
 	public SelectExpression( VariablePath selectPath, int wildcardDepth,
 		Expression whereExpression ) {
+		this( selectPath, wildcardDepth, null, whereExpression );
+	}
+
+	public SelectExpression( VariablePath selectPath, int wildcardDepth, String recursiveField,
+		Expression whereExpression ) {
 		this.selectPath = selectPath;
 		this.wildcardDepth = wildcardDepth;
+		this.recursiveField = recursiveField;
 		this.whereExpression = whereExpression;
 	}
 
@@ -25,6 +32,7 @@ public class SelectExpression implements Expression {
 		return new SelectExpression(
 			(VariablePath) selectPath.cloneExpression( reason ),
 			wildcardDepth,
+			recursiveField,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -33,20 +41,29 @@ public class SelectExpression implements Expression {
 		String rootPath = extractRootPath( selectPath );
 		ValueVector vec = selectPath.getValueVector();
 
-		// Use native path collector instead of ANTLR
-		List< String > candidatePaths = NativePathCollector.collectPaths( vec, rootPath, wildcardDepth );
+		// Use native path collector
+		List< String > candidatePaths;
+		if( recursiveField != null ) {
+			// Recursive field search: var..field
+			candidatePaths = NativePathCollector.collectPathsRecursive( vec, rootPath, recursiveField );
+		} else {
+			// Wildcard or simple path: var, var.*, var.*.*
+			candidatePaths = NativePathCollector.collectPaths( vec, rootPath, wildcardDepth );
+		}
 
 		// Filter candidates using native Jolie WHERE expression
 		List< String > matchingPaths = new ArrayList<>();
-		CurrentValueExpression currentValueExpr = findCurrentValueExpression( whereExpression );
+		List< CurrentValueExpression > currentValueExprs = new ArrayList<>();
+		findAllCurrentValueExpressions( whereExpression, currentValueExprs );
 
 		for( String path : candidatePaths ) {
 			Value candidateValue = getValueAtPath( vec, path, rootPath );
 			if( candidateValue == null )
 				continue; // Path doesn't exist, skip
 
-			if( currentValueExpr != null ) {
-				currentValueExpr.setCurrentNode( candidateValue );
+			// Bind all CurrentValueExpression instances to the candidate value
+			for( CurrentValueExpression expr : currentValueExprs ) {
+				expr.setCurrentNode( candidateValue );
 			}
 
 			Value whereResult = whereExpression.evaluate();
@@ -63,24 +80,42 @@ public class SelectExpression implements Expression {
 		return result;
 	}
 
-	private CurrentValueExpression findCurrentValueExpression( Expression expr ) {
+	private void findAllCurrentValueExpressions( Expression expr, List< CurrentValueExpression > result ) {
 		if( expr instanceof CurrentValueExpression ) {
-			return (CurrentValueExpression) expr;
+			result.add( (CurrentValueExpression) expr );
+			return;
 		}
-		// For comparison expressions, check operands
+
+		// Traverse comparison expressions
 		if( expr instanceof jolie.runtime.expression.CompareCondition ) {
 			jolie.runtime.expression.CompareCondition cmp = (jolie.runtime.expression.CompareCondition) expr;
-			// Check left operand
-			if( cmp.leftExpression() instanceof CurrentValueExpression ) {
-				return (CurrentValueExpression) cmp.leftExpression();
-			}
-			// Check right operand
-			if( cmp.rightExpression() instanceof CurrentValueExpression ) {
-				return (CurrentValueExpression) cmp.rightExpression();
-			}
+			findAllCurrentValueExpressions( cmp.leftExpression(), result );
+			findAllCurrentValueExpressions( cmp.rightExpression(), result );
+			return;
 		}
-		// For other composite expressions, would need more traversal
-		return null;
+
+		// Traverse boolean operators
+		if( expr instanceof jolie.runtime.expression.AndCondition ) {
+			jolie.runtime.expression.AndCondition and = (jolie.runtime.expression.AndCondition) expr;
+			for( Expression child : and.children ) {
+				findAllCurrentValueExpressions( child, result );
+			}
+			return;
+		}
+
+		if( expr instanceof jolie.runtime.expression.OrCondition ) {
+			jolie.runtime.expression.OrCondition or = (jolie.runtime.expression.OrCondition) expr;
+			for( Expression child : or.children ) {
+				findAllCurrentValueExpressions( child, result );
+			}
+			return;
+		}
+
+		if( expr instanceof jolie.runtime.expression.NotExpression ) {
+			jolie.runtime.expression.NotExpression not = (jolie.runtime.expression.NotExpression) expr;
+			findAllCurrentValueExpressions( not.expression, result );
+			return;
+		}
 	}
 
 	private Value getValueAtPath( ValueVector vec, String fullPath, String rootPath ) {

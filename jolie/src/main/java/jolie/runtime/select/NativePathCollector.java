@@ -7,7 +7,7 @@ import java.util.List;
 
 /**
  * Native path collector for SELECT operations without ANTLR dependency. Collects paths from a Value
- * tree based on wildcard depth.
+ * tree based on wildcard depth or recursive field lookup.
  */
 public class NativePathCollector {
 
@@ -34,6 +34,21 @@ public class NativePathCollector {
 		return paths;
 	}
 
+	/**
+	 * Collect paths from a value tree using recursive descent to find all occurrences of a specific
+	 * field.
+	 *
+	 * @param vec ValueVector to traverse
+	 * @param rootPath Base path (e.g., "tree")
+	 * @param targetField Field name to search for recursively (e.g., "value")
+	 * @return List of all paths ending with the target field
+	 */
+	public static List< String > collectPathsRecursive( ValueVector vec, String rootPath, String targetField ) {
+		List< String > paths = new ArrayList<>();
+		collectPathsRecursiveField( vec.first(), rootPath, targetField, paths );
+		return paths;
+	}
+
 	private static void collectPathsRecursive( Value node, String currentPath, int remainingDepth,
 		List< String > paths ) {
 		if( remainingDepth == 0 ) {
@@ -52,5 +67,34 @@ public class NativePathCollector {
 				collectPathsRecursive( childVector.first(), childPath, remainingDepth - 1, paths );
 			}
 		} );
+	}
+
+	private static void collectPathsRecursiveField( Value node, String currentPath, String targetField,
+		List< String > paths ) {
+		// Stack-based iterative DFS to avoid recursion
+		java.util.Stack< java.util.Map.Entry< Value, String > > stack = new java.util.Stack<>();
+		stack.push( new java.util.AbstractMap.SimpleEntry<>( node, currentPath ) );
+
+		while( !stack.isEmpty() ) {
+			java.util.Map.Entry< Value, String > entry = stack.pop();
+			Value current = entry.getKey();
+			String path = entry.getValue();
+
+			// Check all children of current node
+			current.children().forEach( ( fieldName, childVector ) -> {
+				if( !childVector.isEmpty() ) {
+					Value child = childVector.first();
+					String childPath = path.isEmpty() ? fieldName : path + "." + fieldName;
+
+					// If this field matches target, add its path
+					if( fieldName.equals( targetField ) ) {
+						paths.add( childPath );
+					}
+
+					// Push child onto stack to continue searching
+					stack.push( new java.util.AbstractMap.SimpleEntry<>( child, childPath ) );
+				}
+			} );
+		}
 	}
 }

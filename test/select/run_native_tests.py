@@ -18,6 +18,13 @@ tests = [
     ("test_dollar_field.ol", ["tree.b", "tree.c"]),
     ("test_dollar_nested_field.ol", ["items.c"]),
     ("test_grandchildren.ol", ["tree.a.x", "tree.a.y", "tree.b.z"]),
+    ("test_recursive_field.ol", ["tree.b.data.value", "tree.a.value"]),
+    ("test_recursive_where.ol", ["tree.b"]),
+    ("test_recursive_and.ol", ["tree.d.value", "tree.b.data.value"]),
+    ("test_recursive_or.ol", ["tree.c.nested.value", "tree.a.value"]),
+    ("test_recursive_not.ol", ["tree.a", "tree.c"]),
+    ("test_recursive_where_and_field.ol", ["tree.b"]),
+    ("test_recursive_complex.ol", ["tree.e.value", "tree.d.deep.value", "tree.b.data.value", "tree.a.value"]),
 ]
 
 passed = 0

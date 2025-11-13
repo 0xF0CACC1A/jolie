@@ -1436,9 +1436,13 @@ public class OOITBuilder implements UnitOLVisitor {
 
 	@Override
 	public void visit( CurrentValueNode n ) {
-		currExpression = n.fieldPath().isEmpty()
-			? new jolie.runtime.expression.CurrentValueExpression()
-			: new jolie.runtime.expression.CurrentValueExpression( n.fieldPath() );
+		if( n.isRecursive() ) {
+			currExpression = new jolie.runtime.expression.CurrentValueExpression( n.recursiveField() );
+		} else if( n.fieldPath().isEmpty() ) {
+			currExpression = new jolie.runtime.expression.CurrentValueExpression();
+		} else {
+			currExpression = new jolie.runtime.expression.CurrentValueExpression( n.fieldPath() );
+		}
 	}
 
 	@Override
@@ -1497,6 +1501,7 @@ public class OOITBuilder implements UnitOLVisitor {
 		currExpression = new SelectExpression(
 			buildVariablePath( n.selectPath().baseVariable() ),
 			n.selectPath().wildcardDepth(),
+			n.selectPath().recursiveField(),
 			buildExpression( n.whereExpression() ) );
 	}
 
@@ -1739,6 +1744,7 @@ public class OOITBuilder implements UnitOLVisitor {
 		currProcess = new SelectProcess(
 			buildVariablePath( n.selectPath().baseVariable() ),
 			n.selectPath().wildcardDepth(),
+			n.selectPath().recursiveField(),
 			buildExpression( n.whereExpression() ) );
 	}
 
