@@ -3663,20 +3663,43 @@ public class OLParser extends AbstractParser {
 						nextToken(); // eat field name
 						retVal = new CurrentValueNode( getContext(), recursiveFieldName );
 					} else {
-						// Regular field path: $.field or $.field.subfield
-						List< String > fieldPath = new ArrayList<>();
+						// Regular field path: $.field or $.field.subfield or $.field[*]
+						List< CurrentValueNode.FieldPathComponent > fieldPath = new ArrayList<>();
 						assertIdentifier( "expected field name after . in $ expression" );
-						fieldPath.add( token.content() );
+						String fieldName = token.content();
 						nextToken(); // eat field name
 
+						// Check for array wildcard [*]
+						boolean hasArrayWildcard = false;
+						if( token.is( Scanner.TokenType.LSQUARE ) ) {
+							nextToken(); // eat [
+							eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ array wildcard" );
+							eat( Scanner.TokenType.RSQUARE, "expected ] after * in $ array wildcard" );
+							hasArrayWildcard = true;
+						}
+
+						fieldPath.add( new CurrentValueNode.FieldPathComponent( fieldName, hasArrayWildcard ) );
+
+						// Parse additional fields ($.field.subfield or $.field[*].subfield)
 						while( token.is( Scanner.TokenType.DOT ) ) {
 							nextToken(); // eat DOT
 							assertIdentifier( "expected field name after . in $ expression" );
-							fieldPath.add( token.content() );
+							fieldName = token.content();
 							nextToken(); // eat field name
+
+							// Check for array wildcard [*]
+							hasArrayWildcard = false;
+							if( token.is( Scanner.TokenType.LSQUARE ) ) {
+								nextToken(); // eat [
+								eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ array wildcard" );
+								eat( Scanner.TokenType.RSQUARE, "expected ] after * in $ array wildcard" );
+								hasArrayWildcard = true;
+							}
+
+							fieldPath.add( new CurrentValueNode.FieldPathComponent( fieldName, hasArrayWildcard ) );
 						}
 
-						retVal = new CurrentValueNode( getContext(), fieldPath );
+						retVal = new CurrentValueNode( getContext(), fieldPath, true );
 					}
 				} else {
 					// Just $ with no field access

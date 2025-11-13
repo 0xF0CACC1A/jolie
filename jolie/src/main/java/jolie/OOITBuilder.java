@@ -1438,10 +1438,18 @@ public class OOITBuilder implements UnitOLVisitor {
 	public void visit( CurrentValueNode n ) {
 		if( n.isRecursive() ) {
 			currExpression = new jolie.runtime.expression.CurrentValueExpression( n.recursiveField() );
-		} else if( n.fieldPath().isEmpty() ) {
+		} else if( n.fieldPathComponents().isEmpty() ) {
 			currExpression = new jolie.runtime.expression.CurrentValueExpression();
 		} else {
-			currExpression = new jolie.runtime.expression.CurrentValueExpression( n.fieldPath() );
+			// Convert AST components to runtime components
+			java.util.List< jolie.runtime.expression.CurrentValueExpression.FieldPathComponent > runtimePath =
+				new java.util.ArrayList<>();
+			for( jolie.lang.parse.ast.expression.CurrentValueNode.FieldPathComponent astComp : n
+				.fieldPathComponents() ) {
+				runtimePath.add( new jolie.runtime.expression.CurrentValueExpression.FieldPathComponent(
+					astComp.fieldName(), astComp.hasArrayWildcard() ) );
+			}
+			currExpression = new jolie.runtime.expression.CurrentValueExpression( runtimePath, true );
 		}
 	}
 

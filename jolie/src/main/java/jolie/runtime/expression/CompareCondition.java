@@ -52,6 +52,31 @@ public class CompareCondition implements Expression {
 
 	@Override
 	public Value evaluate() {
+		// Check if left side has array wildcards (e.g., $.tags[*] == "red")
+		if( leftExpression instanceof CurrentValueExpression ) {
+			CurrentValueExpression cvExpr = (CurrentValueExpression) leftExpression;
+			if( cvExpr.hasArrayWildcards() ) {
+				// Special handling: evaluate right side, then check array wildcard
+				Value rightValue = rightExpression.evaluate();
+				boolean matches = cvExpr.evaluateArrayWildcardComparison( rightValue, compareOperator );
+				return Value.create( matches );
+			}
+		}
+
+		// Check if right side has array wildcards (e.g., "red" == $.tags[*])
+		if( rightExpression instanceof CurrentValueExpression ) {
+			CurrentValueExpression cvExpr = (CurrentValueExpression) rightExpression;
+			if( cvExpr.hasArrayWildcards() ) {
+				// Special handling: evaluate left side, then check array wildcard
+				// Flip the operator for right-side wildcards
+				Value leftValue = leftExpression.evaluate();
+				boolean matches =
+					cvExpr.evaluateArrayWildcardComparison( leftValue, ( v1, v2 ) -> compareOperator.test( v2, v1 ) );
+				return Value.create( matches );
+			}
+		}
+
+		// Normal case: no array wildcards
 		return Value.create( compareOperator.test( leftExpression.evaluate(), rightExpression.evaluate() ) );
 	}
 
