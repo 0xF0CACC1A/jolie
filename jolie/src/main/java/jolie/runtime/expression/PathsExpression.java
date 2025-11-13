@@ -4,24 +4,24 @@ import jolie.process.TransformationReason;
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
 import jolie.runtime.VariablePath;
-import jolie.runtime.select.NativePathCollector;
+import jolie.runtime.paths.NativePathCollector;
 import java.util.List;
 import java.util.ArrayList;
 
-public class SelectExpression implements Expression {
-	private final VariablePath selectPath;
+public class PathsExpression implements Expression {
+	private final VariablePath pathSpec;
 	private final int wildcardDepth;
 	private final String recursiveField;
 	private final Expression whereExpression;
 
-	public SelectExpression( VariablePath selectPath, int wildcardDepth,
+	public PathsExpression( VariablePath pathSpec, int wildcardDepth,
 		Expression whereExpression ) {
-		this( selectPath, wildcardDepth, null, whereExpression );
+		this( pathSpec, wildcardDepth, null, whereExpression );
 	}
 
-	public SelectExpression( VariablePath selectPath, int wildcardDepth, String recursiveField,
+	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		Expression whereExpression ) {
-		this.selectPath = selectPath;
+		this.pathSpec = pathSpec;
 		this.wildcardDepth = wildcardDepth;
 		this.recursiveField = recursiveField;
 		this.whereExpression = whereExpression;
@@ -29,8 +29,8 @@ public class SelectExpression implements Expression {
 
 	@Override
 	public Expression cloneExpression( TransformationReason reason ) {
-		return new SelectExpression(
-			(VariablePath) selectPath.cloneExpression( reason ),
+		return new PathsExpression(
+			(VariablePath) pathSpec.cloneExpression( reason ),
 			wildcardDepth,
 			recursiveField,
 			whereExpression.cloneExpression( reason ) );
@@ -38,8 +38,8 @@ public class SelectExpression implements Expression {
 
 	@Override
 	public Value evaluate() {
-		String rootPath = extractRootPath( selectPath );
-		ValueVector vec = selectPath.getValueVector();
+		String rootPath = extractRootPath( pathSpec );
+		ValueVector vec = pathSpec.getValueVector();
 
 		// Use native path collector
 		List< String > candidatePaths;

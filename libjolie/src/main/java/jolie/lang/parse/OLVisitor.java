@@ -76,7 +76,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -195,7 +195,7 @@ public interface OLVisitor< C, R > {
 
 	R visit( UndefStatement n, C ctx );
 
-	R visit( SelectStatement n, C ctx );
+	R visit( PathsStatement n, C ctx );
 
 	R visit( ValueVectorSizeExpressionNode n, C ctx );
 
@@ -269,9 +269,9 @@ public interface OLVisitor< C, R > {
 
 	R visit( IfExpressionNode n, C Ctx );
 
-	R visit( SelectExpressionNode n, C ctx );
+	R visit( PathsExpressionNode n, C ctx );
 
 	R visit( CurrentValueNode n, C ctx );
 
-	R visit( SelectPathNode n, C ctx );
+	R visit( PathSpecNode n, C ctx );
 }

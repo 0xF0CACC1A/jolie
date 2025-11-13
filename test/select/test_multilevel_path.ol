@@ -8,7 +8,7 @@ main {
     accounts[1].user.settings.theme = "light";
     accounts[2].user.settings.language = "en";
 
-    select "$[*]" into results from accounts where ".user.settings.theme == dark";
+    paths "$[*]" into results from accounts where ".user.settings.theme == dark";
 
     i = 0;
     while( i < #results ) {

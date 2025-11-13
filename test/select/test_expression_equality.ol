@@ -5,8 +5,8 @@ main {
     root.y = 20;
     root.z = 10;
 
-    // Use SELECT as expression with deep copy operator
-    result2 << select "$.*" into results1 from root where ". == 10";
+    // Use PATHS as expression with deep copy operator
+    result2 << paths "$.*" into results1 from root where ". == 10";
 
     // Print results1 (side effect from INTO)
     i = 0;

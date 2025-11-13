@@ -1,4 +1,4 @@
-// Test: Native SELECT with $.field in WHERE clause
+// Test: Native PATHS with $.field in WHERE clause
 // Expected output: tree.c, tree.b
 
 include "console.iol"
@@ -9,7 +9,7 @@ main {
     tree.c.value = 20;
 
     // Should return tree.b and tree.c since their .value > 10
-    res << select tree.* where $.value > 10;
+    res << paths tree.* where $.value > 10;
 
     i = 0;
     while( i < #res.results ) {

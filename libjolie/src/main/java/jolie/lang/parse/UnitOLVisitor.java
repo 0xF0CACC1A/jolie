@@ -78,7 +78,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -471,10 +471,10 @@ public interface UnitOLVisitor extends OLVisitor< Unit, Unit > {
 		return Unit.INSTANCE;
 	}
 
-	void visit( SelectStatement n );
+	void visit( PathsStatement n );
 
 	@Override
-	default Unit visit( SelectStatement n, Unit ctx ) {
+	default Unit visit( PathsStatement n, Unit ctx ) {
 		visit( n );
 		return Unit.INSTANCE;
 	}
@@ -767,10 +767,10 @@ public interface UnitOLVisitor extends OLVisitor< Unit, Unit > {
 		return Unit.INSTANCE;
 	}
 
-	void visit( SelectExpressionNode n );
+	void visit( PathsExpressionNode n );
 
 	@Override
-	default Unit visit( SelectExpressionNode n, Unit ctx ) {
+	default Unit visit( PathsExpressionNode n, Unit ctx ) {
 		visit( n );
 		return Unit.INSTANCE;
 	}
@@ -783,10 +783,10 @@ public interface UnitOLVisitor extends OLVisitor< Unit, Unit > {
 		return Unit.INSTANCE;
 	}
 
-	void visit( SelectPathNode n );
+	void visit( PathSpecNode n );
 
 	@Override
-	default Unit visit( SelectPathNode n, Unit ctx ) {
+	default Unit visit( PathSpecNode n, Unit ctx ) {
 		visit( n );
 		return Unit.INSTANCE;
 	}

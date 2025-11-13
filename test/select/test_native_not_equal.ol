@@ -1,4 +1,4 @@
-// Test: Native SELECT with not equal comparison
+// Test: Native PATHS with not equal comparison
 // Expected output: vals.c, vals.a
 
 include "console.iol"
@@ -8,7 +8,7 @@ main {
     vals.b = 2;
     vals.c = 3;
 
-    res << select vals.* where $ != 2;
+    res << paths vals.* where $ != 2;
 
     i = 0;
     while( i < #res.results ) {

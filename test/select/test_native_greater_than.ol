@@ -1,4 +1,4 @@
-// Test: Native SELECT with greater than comparison
+// Test: Native PATHS with greater than comparison
 // Expected output: items.c, items.b
 
 include "console.iol"
@@ -8,7 +8,7 @@ main {
     items.b = 15;
     items.c = 20;
 
-    res << select items.* where $ > 10;
+    res << paths items.* where $ > 10;
 
     i = 0;
     while( i < #res.results ) {

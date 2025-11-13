@@ -1,22 +1,22 @@
 package jolie.lang.parse.ast;
 
 import jolie.lang.parse.OLVisitor;
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 import jolie.lang.parse.context.ParsingContext;
 
-public class SelectStatement extends OLSyntaxNode {
-	private final SelectPathNode selectPath;
+public class PathsStatement extends OLSyntaxNode {
+	private final PathSpecNode pathSpec;
 	private final OLSyntaxNode whereExpression;
 
-	public SelectStatement( ParsingContext context, SelectPathNode selectPath,
+	public PathsStatement( ParsingContext context, PathSpecNode pathSpec,
 		OLSyntaxNode whereExpression ) {
 		super( context );
-		this.selectPath = selectPath;
+		this.pathSpec = pathSpec;
 		this.whereExpression = whereExpression;
 	}
 
-	public SelectPathNode selectPath() {
-		return selectPath;
+	public PathSpecNode pathSpec() {
+		return pathSpec;
 	}
 
 	public OLSyntaxNode whereExpression() {

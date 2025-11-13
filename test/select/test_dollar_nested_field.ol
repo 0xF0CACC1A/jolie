@@ -1,4 +1,4 @@
-// Test: Native SELECT with $.field.subfield in WHERE clause
+// Test: Native PATHS with $.field.subfield in WHERE clause
 // Expected output: items.c
 
 include "console.iol"
@@ -9,7 +9,7 @@ main {
     items.c.data.score = 15;
 
     // Should return items.c since its .data.score > 10
-    res << select items.* where $.data.score > 10;
+    res << paths items.* where $.data.score > 10;
 
     i = 0;
     while( i < #res.results ) {

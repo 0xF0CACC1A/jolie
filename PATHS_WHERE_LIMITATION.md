@@ -1,4 +1,4 @@
-# SELECT WHERE Clause Limitations
+# PATHS WHERE Clause Limitations
 
 ## Analysis of WHERE Clause Operators and Jolie Syntax Conflicts
 
@@ -30,12 +30,12 @@ with (statements) {
 
 This allows you to avoid repeating the full path when working with nested structures.
 
-### The Conflict with SELECT WHERE
+### The Conflict with PATHS WHERE
 
-Currently, SELECT uses a string-based WHERE clause parsed by ANTLR:
+Currently, PATHS uses a string-based WHERE clause parsed by ANTLR:
 
 ```jolie
-select "$.*" into results from root where ". == 10"
+paths "$.*" into results from root where ". == 10"
                                           ↑ string, parsed by ANTLR
 ```
 
@@ -44,12 +44,12 @@ In the ANTLR-parsed WHERE clause, `.` represents "the current value being filter
 **If we wanted to make WHERE a native Jolie expression**, we would naturally want to write:
 
 ```jolie
-select "$.*" into results from root where . == 10
+paths "$.*" into results from root where . == 10
                                           ↑ would be ambiguous!
 ```
 
-**The problem**: If this SELECT appears inside a `with` block, the parser cannot distinguish whether `.` means:
-- Option A: The current value being filtered by SELECT
+**The problem**: If this PATHS appears inside a `with` block, the parser cannot distinguish whether `.` means:
+- Option A: The current value being filtered by PATHS
 - Option B: The path specified in the surrounding `with` construct
 
 ### Example of the Ambiguity
@@ -57,7 +57,7 @@ select "$.*" into results from root where . == 10
 ```jolie
 with (data) {
     // What does '.' refer to here?
-    select "$.*" into results from .items where . == 10
+    paths "$.*" into results from .items where . == 10
                                     ↑ WITH context    ↑ current value?
 }
 ```
@@ -70,7 +70,7 @@ The WHERE clause uses `in` for path existence checks:
 
 ```jolie
 // ANTLR WHERE clause (string)
-select "$.*" into results from root where ".status in ."
+paths "$.*" into results from root where ".status in ."
                                           ↑ checks if current value has a .status field
 ```
 
@@ -100,19 +100,19 @@ embedded {
 **The conflict:** If we make WHERE a native Jolie expression with `in` as a binary operator:
 
 ```jolie
-select "$.*" into results from root where .status in .
+paths "$.*" into results from root where .status in .
 ```
 
 The parser would need to distinguish between:
 - `in` as a path existence operator in WHERE (our new usage)
 - `in` as part of a `for` loop or `spawn` statement
 
-This could create ambiguous situations, especially if SELECT is used inside a `for` loop:
+This could create ambiguous situations, especially if PATHS is used inside a `for` loop:
 
 ```jolie
 for ( item in items ) {
     // Does this 'in' bind to 'for' or to WHERE?
-    select "$.*" into results from item where .field in .
+    paths "$.*" into results from item where .field in .
 }
 ```
 

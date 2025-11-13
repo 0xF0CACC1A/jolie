@@ -1,4 +1,4 @@
-// Test: Native SELECT with var.* syntax (no ANTLR string)
+// Test: Native PATHS with var.* syntax (no ANTLR string)
 // Expected output: tree.c, tree.a
 
 include "console.iol"
@@ -8,7 +8,7 @@ main {
     tree.b = 6;
     tree.c = 5;
 
-    res << select tree.* where $ == 5;
+    res << paths tree.* where $ == 5;
 
     i = 0;
     while( i < #res.results ) {

@@ -1,4 +1,4 @@
-// Test: SELECT with recursive descent (var..field)
+// Test: PATHS with recursive descent (var..field)
 // Expected output: tree.b.data.value, tree.a.value
 
 include "console.iol"
@@ -9,7 +9,7 @@ main {
     tree.c.other = 20;
 
     // Should find all paths ending with "value" under tree
-    res << select tree..value where $ > 0;
+    res << paths tree..value where $ > 0;
 
     i = 0;
     while( i < #res.results ) {

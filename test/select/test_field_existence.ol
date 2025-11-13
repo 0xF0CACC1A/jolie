@@ -18,7 +18,7 @@ main {
     items[3].name = "David";
     items[3].email = "david@example.com";
 
-    select "$[*]" into results from items where ".email in . && .age == 30";
+    paths "$[*]" into results from items where ".email in . && .age == 30";
 
     i = 0;
     while( i < #results ) {

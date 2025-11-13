@@ -13,7 +13,7 @@ main {
     items[2].type = "admin";
     items[2].status = "inactive";
 
-    select "$[*]" into results from items where ".status == active && !.type == admin";
+    paths "$[*]" into results from items where ".status == active && !.type == admin";
 
     i = 0;
     while( i < #results ) {

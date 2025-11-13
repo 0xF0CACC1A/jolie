@@ -1,4 +1,4 @@
-# Implementing Recursive Field Descent (..field) in SELECT
+# Implementing Recursive Field Descent (..field) in PATHS
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -16,12 +16,12 @@
 ## Overview
 
 ### Goal
-Add recursive field descent syntax (`..field`) to SELECT, enabling deep search for fields at any depth in the tree.
+Add recursive field descent syntax (`..field`) to PATHS, enabling deep search for fields at any depth in the tree.
 
-**In SELECT clause (path selection):**
+**In PATHS clause (path specification):**
 ```jolie
 // Find all "value" fields anywhere under tree
-select tree..value where $ > 0
+paths tree..value where $ > 0
        ↑    ↑
        var  recursive field
 ```
@@ -29,7 +29,7 @@ select tree..value where $ > 0
 **In WHERE clause (condition filtering):**
 ```jolie
 // Find nodes that have a "score" field somewhere in their descendants
-select tree.* where $..score > 10
+paths tree.* where $..score > 10
                     ↑  ↑
                     $  recursive field
 ```
@@ -43,13 +43,13 @@ select tree.* where $..score > 10
 
 ### Key Examples
 
-**Example 1: SELECT clause - Find all "value" fields**
+**Example 1: PATHS clause - Find all "value" fields**
 ```jolie
 tree.a.value = 5;
 tree.b.data.value = 15;
 tree.c.other = 20;
 
-result << select tree..value where $ > 0;
+result << paths tree..value where $ > 0;
 // Returns: ["tree.b.data.value", "tree.a.value"]
 //          All paths ending with "value" under tree
 ```
@@ -60,7 +60,7 @@ tree.a.data.score = 5;
 tree.b.info.score = 15;
 tree.c.other = 20;
 
-result << select tree.* where $..score > 10;
+result << paths tree.* where $..score > 10;
 // Returns: ["tree.b"]
 //          Nodes containing a descendant "score" > 10
 ```
@@ -81,13 +81,13 @@ result << select tree.* where $..score > 10;
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select tree.* where $ > 0                       │
+│ Jolie Code: paths tree.* where $ > 0                       │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser                                                       │
 │   - Parses: tree . *                                         │
-│   - Creates: SelectPathNode(baseVar=tree, wildcardDepth=1)  │
+│   - Creates: PathSpecNode(baseVar=tree, wildcardDepth=1)  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -106,7 +106,7 @@ Supported patterns:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select tree..value where $ > 0                  │
+│ Jolie Code: paths tree..value where $ > 0                  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -115,7 +115,7 @@ Supported patterns:
 │            ↑    ↑ ↑ ↑                                        │
 │            ID  DOT DOT ID                                    │
 │   - Detects: Two consecutive DOTs                            │
-│   - Creates: SelectPathNode(baseVar=tree,                    │
+│   - Creates: PathSpecNode(baseVar=tree,                    │
 │              wildcardDepth=0,                                │
 │              recursiveField="value")                         │
 └─────────────────────────────────────────────────────────────┘
@@ -136,7 +136,7 @@ New supported patterns:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select tree.* where $..score > 10               │
+│ Jolie Code: paths tree.* where $..score > 10               │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -165,10 +165,10 @@ New supported patterns:
 
 | Pattern | Meaning | Example | Returns |
 |---------|---------|---------|---------|
-| `var` | Single node | `select tree where...` | `["tree"]` |
-| `var.*` | Direct children | `select tree.* where...` | `["tree.a", "tree.b"]` |
-| `var.*.*` | Grandchildren | `select tree.*.* where...` | `["tree.a.x", "tree.a.y"]` |
-| `var..field` | **Recursive field** | `select tree..value where...` | `["tree.a.value", "tree.b.data.value"]` |
+| `var` | Single node | `paths tree where...` | `["tree"]` |
+| `var.*` | Direct children | `paths tree.* where...` | `["tree.a", "tree.b"]` |
+| `var.*.*` | Grandchildren | `paths tree.*.* where...` | `["tree.a.x", "tree.a.y"]` |
+| `var..field` | **Recursive field** | `paths tree..value where...` | `["tree.a.value", "tree.b.data.value"]` |
 
 ### Semantic Differences
 
@@ -185,9 +185,9 @@ New supported patterns:
 ### Token Sequence
 
 ```
-Input: select tree..value where $ > 0
+Input: paths tree..value where $ > 0
 
-Tokens: SELECT ID(tree) DOT DOT ID(value) WHERE DOLLAR GT INT(0)
+Tokens: PATHS ID(tree) DOT DOT ID(value) WHERE DOLLAR GT INT(0)
         ↑      ↑         ↑   ↑   ↑
         |      |         |   |   |
         |      |         |   |   Field name
@@ -223,17 +223,17 @@ if (token.is(Scanner.TokenType.DOT)) {
 
 ## Implementation Steps
 
-### Step 1: Extend SelectPathNode for Recursive Fields
+### Step 1: Extend PathSpecNode for Recursive Fields
 
-**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java`
+**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java`
 
 **Before:**
 ```java
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;
     private final int wildcardDepth;
 
-    public SelectPathNode(ParsingContext context,
+    public PathSpecNode(ParsingContext context,
                          VariablePathNode baseVariable,
                          int wildcardDepth) {
         super(context);
@@ -248,20 +248,20 @@ public class SelectPathNode extends OLSyntaxNode {
 
 **After:**
 ```java
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;
     private final int wildcardDepth;
     private final String recursiveField;  // ← NEW
 
     // Backward compatibility constructor
-    public SelectPathNode(ParsingContext context,
+    public PathSpecNode(ParsingContext context,
                          VariablePathNode baseVariable,
                          int wildcardDepth) {
         this(context, baseVariable, wildcardDepth, null);
     }
 
     // Full constructor with recursive field support
-    public SelectPathNode(ParsingContext context,
+    public PathSpecNode(ParsingContext context,
                          VariablePathNode baseVariable,
                          int wildcardDepth,
                          String recursiveField) {
@@ -294,12 +294,12 @@ public class SelectPathNode extends OLSyntaxNode {
 
 **File**: `libjolie/src/main/java/jolie/lang/parse/OLParser.java`
 
-**Location**: Two places - SELECT statement (line ~2515) and SELECT expression (line ~3735)
+**Location**: Two places - PATHS statement (line ~2515) and PATHS expression (line ~3735)
 
 **Before:**
 ```java
-// Native syntax: select var where ... OR select var.* where ... OR select var.*.* where ...
-assertIdentifier("expected variable name after SELECT");
+// Native syntax: paths var where ... OR paths var.* where ... OR paths var.*.* where ...
+assertIdentifier("expected variable name after PATHS");
 String varId = token.content();
 nextToken();
 
@@ -314,17 +314,17 @@ while (token.is(Scanner.TokenType.DOT)) {
     nextToken(); // eat DOT
 
     // Must be followed by ASTERISK
-    eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+    eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
     wildcardDepth++;
 }
 
-SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, wildcardDepth);
+PathSpecNode pathSpec = new PathSpecNode(getContext(), baseVar, wildcardDepth);
 ```
 
 **After:**
 ```java
-// Native syntax: select var where ... OR select var.* where ... OR select var..field where ...
-assertIdentifier("expected variable name after SELECT");
+// Native syntax: paths var where ... OR paths var.* where ... OR paths var..field where ...
+assertIdentifier("expected variable name after PATHS");
 String varId = token.content();
 nextToken();
 
@@ -342,23 +342,23 @@ if (token.is(Scanner.TokenType.DOT)) {
     if (token.is(Scanner.TokenType.DOT)) {
         // Recursive descent: var..field
         nextToken(); // eat second DOT
-        assertIdentifier("expected field name after .. in SELECT");
+        assertIdentifier("expected field name after .. in PATHS");
         recursiveField = token.content();
         nextToken(); // eat field name
     } else {
         // Wildcard path: count levels (.*, .*.*)
-        eat(Scanner.TokenType.ASTERISK, "expected * or . after first . in SELECT");
+        eat(Scanner.TokenType.ASTERISK, "expected * or . after first . in PATHS");
         wildcardDepth++;
 
         while (token.is(Scanner.TokenType.DOT)) {
             nextToken(); // eat DOT
-            eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+            eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
             wildcardDepth++;
         }
     }
 }
 
-SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, wildcardDepth, recursiveField);
+PathSpecNode pathSpec = new PathSpecNode(getContext(), baseVar, wildcardDepth, recursiveField);
 ```
 
 **Why necessary**: Parser must distinguish between:
@@ -374,12 +374,12 @@ SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, wildcardDe
 3. Consume remaining tokens appropriately
 
 **Error messages**:
-- After first DOT: "expected * or . after first . in SELECT"
-- After second DOT: "expected field name after .. in SELECT"
+- After first DOT: "expected * or . after first . in PATHS"
+- After second DOT: "expected field name after .. in PATHS"
 
 **Classification**: ABSOLUTELY NECESSARY
 
-**Identical change needed**: At line ~3735 for SelectExpressionNode (expression variant)
+**Identical change needed**: At line ~3735 for PathsExpressionNode (expression variant)
 
 ---
 
@@ -520,7 +520,7 @@ case DOLLAR:
 - `$.field` → Direct field access
 - `$..field` → Recursive field search
 
-**Same strategy as SELECT**: Check for two consecutive DOTs after DOLLAR.
+**Same strategy as PATHS**: Check for two consecutive DOTs after DOLLAR.
 
 **Classification**: ABSOLUTELY NECESSARY
 
@@ -528,7 +528,7 @@ case DOLLAR:
 
 ### Step 5: Create Native Path Collection with Recursive Support
 
-**File**: `jolie/src/main/java/jolie/runtime/select/NativePathCollector.java`
+**File**: `jolie/src/main/java/jolie/runtime/paths/NativePathCollector.java`
 
 **New method**: `collectPathsRecursive(ValueVector vec, String rootPath, String targetField)`
 
@@ -578,7 +578,7 @@ private static void collectPathsRecursiveField(Value node, String currentPath, S
 }
 ```
 
-**Why necessary**: This is the core algorithm for recursive field search in SELECT clause.
+**Why necessary**: This is the core algorithm for recursive field search in PATHS clause.
 
 **Key design decisions**:
 
@@ -619,20 +619,20 @@ Result: ["tree.b.data.value", "tree.a.value"]
 
 ---
 
-### Step 6: Update SelectProcess and SelectExpression to Use Recursive Paths
+### Step 6: Update PathsProcess and PathsExpression to Use Recursive Paths
 
-**File**: `jolie/src/main/java/jolie/process/SelectProcess.java`
+**File**: `jolie/src/main/java/jolie/process/PathsProcess.java`
 
 **Before:**
 ```java
-public class SelectProcess implements Process {
-    private final VariablePath selectPath;
+public class PathsProcess implements Process {
+    private final VariablePath pathSpec;
     private final int wildcardDepth;
     private final Expression whereExpression;
 
-    public SelectProcess(VariablePath selectPath, int wildcardDepth,
+    public PathsProcess(VariablePath pathSpec, int wildcardDepth,
         Expression whereExpression) {
-        this.selectPath = selectPath;
+        this.pathSpec = pathSpec;
         this.wildcardDepth = wildcardDepth;
         this.whereExpression = whereExpression;
     }
@@ -649,22 +649,22 @@ public class SelectProcess implements Process {
 
 **After:**
 ```java
-public class SelectProcess implements Process {
-    private final VariablePath selectPath;
+public class PathsProcess implements Process {
+    private final VariablePath pathSpec;
     private final int wildcardDepth;
     private final String recursiveField;  // ← NEW
     private final Expression whereExpression;
 
     // Backward compatibility constructor
-    public SelectProcess(VariablePath selectPath, int wildcardDepth,
+    public PathsProcess(VariablePath pathSpec, int wildcardDepth,
         Expression whereExpression) {
-        this(selectPath, wildcardDepth, null, whereExpression);
+        this(pathSpec, wildcardDepth, null, whereExpression);
     }
 
     // Full constructor
-    public SelectProcess(VariablePath selectPath, int wildcardDepth, String recursiveField,
+    public PathsProcess(VariablePath pathSpec, int wildcardDepth, String recursiveField,
         Expression whereExpression) {
-        this.selectPath = selectPath;
+        this.pathSpec = pathSpec;
         this.wildcardDepth = wildcardDepth;
         this.recursiveField = recursiveField;
         this.whereExpression = whereExpression;
@@ -672,8 +672,8 @@ public class SelectProcess implements Process {
 
     @Override
     public Process copy(TransformationReason reason) {
-        return new SelectProcess(
-            (VariablePath) selectPath.cloneExpression(reason),
+        return new PathsProcess(
+            (VariablePath) pathSpec.cloneExpression(reason),
             wildcardDepth,
             recursiveField,  // ← Pass through
             whereExpression.cloneExpression(reason));
@@ -707,7 +707,7 @@ public class SelectProcess implements Process {
 
 **Classification**: ABSOLUTELY NECESSARY
 
-**Identical change needed**: In `SelectExpression.java` (expression variant)
+**Identical change needed**: In `PathsExpression.java` (expression variant)
 
 ---
 
@@ -853,15 +853,15 @@ Stack states:
 
 **File**: `jolie/src/main/java/jolie/OOITBuilder.java`
 
-**Change 8.1**: Update `visit(SelectStatement)` (line ~1737)
+**Change 8.1**: Update `visit(PathsStatement)` (line ~1737)
 
 **Before:**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().wildcardDepth(),
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().wildcardDepth(),
         buildExpression(n.whereExpression()));
 }
 ```
@@ -869,24 +869,24 @@ public void visit(SelectStatement n) {
 **After:**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().wildcardDepth(),
-        n.selectPath().recursiveField(),  // ← NEW
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().wildcardDepth(),
+        n.pathSpec().recursiveField(),  // ← NEW
         buildExpression(n.whereExpression()));
 }
 ```
 
-**Change 8.2**: Update `visit(SelectExpressionNode)` (line ~1495)
+**Change 8.2**: Update `visit(PathsExpressionNode)` (line ~1495)
 
 **Before:**
 ```java
 @Override
-public void visit(SelectExpressionNode n) {
-    currExpression = new SelectExpression(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().wildcardDepth(),
+public void visit(PathsExpressionNode n) {
+    currExpression = new PathsExpression(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().wildcardDepth(),
         buildExpression(n.whereExpression()));
 }
 ```
@@ -894,11 +894,11 @@ public void visit(SelectExpressionNode n) {
 **After:**
 ```java
 @Override
-public void visit(SelectExpressionNode n) {
-    currExpression = new SelectExpression(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().wildcardDepth(),
-        n.selectPath().recursiveField(),  // ← NEW
+public void visit(PathsExpressionNode n) {
+    currExpression = new PathsExpression(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().wildcardDepth(),
+        n.pathSpec().recursiveField(),  // ← NEW
         buildExpression(n.whereExpression()));
 }
 ```
@@ -942,8 +942,8 @@ public void visit(CurrentValueNode n) {
 **Before:**
 ```java
 @Override
-public void visit(SelectPathNode n) {
-    currNode = new SelectPathNode(
+public void visit(PathSpecNode n) {
+    currNode = new PathSpecNode(
         n.context(),
         optimizePath(n.baseVariable()),
         n.wildcardDepth());
@@ -953,8 +953,8 @@ public void visit(SelectPathNode n) {
 **After:**
 ```java
 @Override
-public void visit(SelectPathNode n) {
-    currNode = new SelectPathNode(
+public void visit(PathSpecNode n) {
+    currNode = new PathSpecNode(
         n.context(),
         optimizePath(n.baseVariable()),
         n.wildcardDepth(),
@@ -974,7 +974,7 @@ public void visit(SelectPathNode n) {
 
 We must add recursive field support to all visitor implementations. This is identical to previous AST node additions.
 
-**No code changes needed**: SelectPathNode and CurrentValueNode already have visitor methods. We're just extending their internal structure.
+**No code changes needed**: PathSpecNode and CurrentValueNode already have visitor methods. We're just extending their internal structure.
 
 **Classification**: No additional interface overhead (already handled in previous steps)
 
@@ -1098,21 +1098,21 @@ These changes are **required** for the feature to work:
 
 | File | Change | Why |
 |------|--------|-----|
-| SelectPathNode.java | Add recursiveField field | Store recursive field name in AST |
-| SelectPathNode.java | Add isRecursive() method | Check if path is recursive |
-| OLParser.java | Parse .. token sequence (SELECT) | Recognize var..field syntax |
+| PathSpecNode.java | Add recursiveField field | Store recursive field name in AST |
+| PathSpecNode.java | Add isRecursive() method | Check if path is recursive |
+| OLParser.java | Parse .. token sequence (PATHS) | Recognize var..field syntax |
 | OLParser.java | Parse .. token sequence (WHERE) | Recognize $..field syntax |
 | CurrentValueNode.java | Add recursiveField field | Store recursive field in WHERE AST |
 | CurrentValueNode.java | Add isRecursive() method | Check if $ is recursive |
-| NativePathCollector.java | Add collectPathsRecursive() | Implement recursive SELECT logic |
+| NativePathCollector.java | Add collectPathsRecursive() | Implement recursive PATHS logic |
 | NativePathCollector.java | Stack-based DFS implementation | Safe deep traversal |
 | CurrentValueExpression.java | Add recursiveField field | Store recursive field at runtime |
 | CurrentValueExpression.java | Add searchRecursive() | Implement recursive WHERE logic |
-| SelectProcess.java | Accept recursiveField parameter | Runtime execution of SELECT |
-| SelectProcess.java | Conditional path collection | Choose between wildcard/recursive |
-| SelectExpression.java | Accept recursiveField parameter | Runtime execution of SELECT expr |
-| SelectExpression.java | Conditional path collection | Choose between wildcard/recursive |
-| OOITBuilder.java | Extract recursiveField (SELECT) | Convert AST to runtime |
+| PathsProcess.java | Accept recursiveField parameter | Runtime execution of PATHS |
+| PathsProcess.java | Conditional path collection | Choose between wildcard/recursive |
+| PathsExpression.java | Accept recursiveField parameter | Runtime execution of PATHS expr |
+| PathsExpression.java | Conditional path collection | Choose between wildcard/recursive |
+| OOITBuilder.java | Extract recursiveField (PATHS) | Convert AST to runtime |
 | OOITBuilder.java | Extract recursiveField (WHERE) | Convert AST to runtime |
 | OLParseTreeOptimizer.java | Preserve recursiveField | Prevent loss during optimization |
 
@@ -1130,7 +1130,7 @@ These changes are **necessary** but contain minimal logic:
 
 ### Interface Satisfaction Only
 
-**ZERO interface overhead**: SelectPathNode and CurrentValueNode already had visitor methods. We only extended their internal fields, which doesn't require new visitor methods.
+**ZERO interface overhead**: PathSpecNode and CurrentValueNode already had visitor methods. We only extended their internal fields, which doesn't require new visitor methods.
 
 **Total: 0 interface-only changes**
 
@@ -1143,7 +1143,7 @@ These changes are **necessary** but contain minimal logic:
 - **New files created**: 0 files
 - **Total files touched**: 8 files
 
-**Ratio**: 0/8 = **0% interface overhead** (compared to 44% for CurrentValueNode, 35% for SelectPathNode initial additions)
+**Ratio**: 0/8 = **0% interface overhead** (compared to 44% for CurrentValueNode, 35% for PathSpecNode initial additions)
 
 **Why no overhead?**: We extended existing AST nodes rather than creating new ones. The visitor pattern infrastructure was already in place.
 
@@ -1162,7 +1162,7 @@ Value child = node.getFirstChild("field");  // Creates "field" if doesn't exist!
 // Now node has a child "field" with empty value
 ```
 
-**Problem for SELECT**: We're querying existing data, not modifying it. Creating paths during traversal would:
+**Problem for PATHS**: We're querying existing data, not modifying it. Creating paths during traversal would:
 1. Corrupt the original data structure
 2. Return false positives (paths that didn't exist)
 3. Cause memory leaks in long-running services
@@ -1263,7 +1263,7 @@ private Value searchRecursive(Value node, String targetField) {
 
 ### Test Suite Updates
 
-**File**: `test/select/run_native_tests.py`
+**File**: `test/paths/run_native_tests.py`
 
 Added two new tests to the existing suite:
 
@@ -1275,12 +1275,12 @@ tests = [
 ]
 ```
 
-### Test 1: Recursive Field in SELECT Clause
+### Test 1: Recursive Field in PATHS Clause
 
-**File**: `test/select/test_recursive_field.ol`
+**File**: `test/paths/test_recursive_field.ol`
 
 ```jolie
-// Test: SELECT with recursive descent (var..field)
+// Test: PATHS with recursive descent (var..field)
 // Expected output: tree.b.data.value, tree.a.value
 
 include "console.iol"
@@ -1291,7 +1291,7 @@ main {
     tree.c.other = 20;
 
     // Should find all paths ending with "value" under tree
-    res << select tree..value where $ > 0;
+    res << paths tree..value where $ > 0;
 
     i = 0;
     while( i < #res.results ) {
@@ -1316,10 +1316,10 @@ tree.a.value
 
 ### Test 2: Recursive Field in WHERE Clause
 
-**File**: `test/select/test_recursive_where.ol`
+**File**: `test/paths/test_recursive_where.ol`
 
 ```jolie
-// Test: SELECT with recursive field in WHERE clause ($..field)
+// Test: PATHS with recursive field in WHERE clause ($..field)
 // Expected output: tree.b
 
 include "console.iol"
@@ -1330,7 +1330,7 @@ main {
     tree.c.other = 20;
 
     // Should return tree.b since it has a descendant field "score" > 10
-    res << select tree.* where $..score > 10;
+    res << paths tree.* where $..score > 10;
 
     i = 0;
     while( i < #res.results ) {
@@ -1357,7 +1357,7 @@ tree.b
 
 ```
 ============================================================
-Native SELECT Syntax Tests
+Native PATHS Syntax Tests
 ============================================================
 
 ✓ test_native_wildcard.ol
@@ -1383,7 +1383,7 @@ Native SELECT Syntax Tests
 **Empty results**:
 ```jolie
 tree.a.other = 10;
-res << select tree..value where $ > 0;
+res << paths tree..value where $ > 0;
 // Returns: [] (no "value" fields found)
 ```
 ✅ PASS
@@ -1391,7 +1391,7 @@ res << select tree..value where $ > 0;
 **Nested matches**:
 ```jolie
 tree.a.b.c.d.value = 5;
-res << select tree..value where $ > 0;
+res << paths tree..value where $ > 0;
 // Returns: ["tree.a.b.c.d.value"]
 ```
 ✅ PASS
@@ -1401,7 +1401,7 @@ res << select tree..value where $ > 0;
 tree.value = 1;
 tree.a.value = 2;
 tree.a.b.value = 3;
-res << select tree..value where $ > 0;
+res << paths tree..value where $ > 0;
 // Returns: ["tree.a.b.value", "tree.a.value", "tree.value"]
 ```
 ✅ PASS
@@ -1412,17 +1412,17 @@ res << select tree..value where $ > 0;
 
 ### Files Created (2)
 
-1. `test/select/test_recursive_field.ol`
+1. `test/paths/test_recursive_field.ol`
    - **Lines**: 19
-   - **Purpose**: Test recursive field in SELECT clause
+   - **Purpose**: Test recursive field in PATHS clause
 
-2. `test/select/test_recursive_where.ol`
+2. `test/paths/test_recursive_where.ol`
    - **Lines**: 19
    - **Purpose**: Test recursive field in WHERE clause
 
 ### Files Modified - Critical (8)
 
-1. `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java`
+1. `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java`
    - **Lines changed**: 15
    - **Changes**:
      - Add `recursiveField` field
@@ -1433,8 +1433,8 @@ res << select tree..value where $ > 0;
 2. `libjolie/src/main/java/jolie/lang/parse/OLParser.java`
    - **Lines changed**: 40 (20 per location × 2 locations)
    - **Changes**:
-     - Parse `..field` syntax in SELECT statement (line ~2515)
-     - Parse `..field` syntax in SELECT expression (line ~3735)
+     - Parse `..field` syntax in PATHS statement (line ~2515)
+     - Parse `..field` syntax in PATHS expression (line ~3735)
      - Parse `$..field` syntax in WHERE expression (line ~3615)
      - Token sequence detection for double DOT
 
@@ -1446,7 +1446,7 @@ res << select tree..value where $ > 0;
      - Add `recursiveField()` accessor
      - Add `isRecursive()` method
 
-4. `jolie/src/main/java/jolie/runtime/select/NativePathCollector.java`
+4. `jolie/src/main/java/jolie/runtime/paths/NativePathCollector.java`
    - **Lines changed**: 35
    - **Changes**:
      - Add `collectPathsRecursive()` public method
@@ -1463,7 +1463,7 @@ res << select tree..value where $ > 0;
      - Add `searchRecursive()` private implementation
      - Stack-based iterative DFS algorithm
 
-6. `jolie/src/main/java/jolie/process/SelectProcess.java`
+6. `jolie/src/main/java/jolie/process/PathsProcess.java`
    - **Lines changed**: 15
    - **Changes**:
      - Add `recursiveField` field
@@ -1471,7 +1471,7 @@ res << select tree..value where $ > 0;
      - Update `copy()` to pass recursiveField
      - Update `run()` with conditional path collection
 
-7. `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+7. `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
    - **Lines changed**: 15
    - **Changes**:
      - Add `recursiveField` field
@@ -1482,16 +1482,16 @@ res << select tree..value where $ > 0;
 8. `jolie/src/main/java/jolie/OOITBuilder.java`
    - **Lines changed**: 10
    - **Changes**:
-     - Update `visit(SelectStatement)` to extract recursiveField
-     - Update `visit(SelectExpressionNode)` to extract recursiveField
+     - Update `visit(PathsStatement)` to extract recursiveField
+     - Update `visit(PathsExpressionNode)` to extract recursiveField
      - Update `visit(CurrentValueNode)` to handle isRecursive()
 
 9. `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
    - **Lines changed**: 2
    - **Changes**:
-     - Update `visit(SelectPathNode)` to preserve recursiveField
+     - Update `visit(PathSpecNode)` to preserve recursiveField
 
-10. `test/select/run_native_tests.py`
+10. `test/paths/run_native_tests.py`
     - **Lines changed**: 2
     - **Changes**:
       - Add test_recursive_field.ol to test list
@@ -1516,9 +1516,9 @@ res << select tree..value where $ > 0;
 
 ## Conclusion
 
-Implementing recursive field descent (`..field`) in SELECT required:
+Implementing recursive field descent (`..field`) in PATHS required:
 
-1. **AST extensions**: Added `recursiveField` to SelectPathNode and CurrentValueNode
+1. **AST extensions**: Added `recursiveField` to PathSpecNode and CurrentValueNode
 2. **Parser updates**: Recognize double DOT token sequence in 3 locations
 3. **Native path collection**: Stack-based iterative DFS for finding all field occurrences
 4. **WHERE evaluation**: Stack-based iterative DFS for finding first field occurrence
@@ -1531,7 +1531,7 @@ Implementing recursive field descent (`..field`) in SELECT required:
 1. **Token sequence matters**: `..` (two DOTs) is distinct from `.*` (DOT ASTERISK)
 2. **Stack-based DFS is essential**: Recursive functions risk stack overflow on deep trees
 3. **Vivification must be prevented**: Query operations must never modify source data
-4. **Dual implementation needed**: SELECT clause finds all matches, WHERE finds first match
+4. **Dual implementation needed**: PATHS clause finds all matches, WHERE finds first match
 5. **No visitor overhead**: Extending existing AST nodes avoids interface proliferation
 
 **Performance characteristics**:
@@ -1541,7 +1541,7 @@ Implementing recursive field descent (`..field`) in SELECT required:
 - **Vivification**: Zero (safe traversal guaranteed)
 - **Stack overflow risk**: Zero (iterative, not recursive)
 
-**Current status**: Both `var..field` in SELECT and `$..field` in WHERE work correctly with comprehensive test coverage (12/12 tests passing).
+**Current status**: Both `var..field` in PATHS and `$..field` in WHERE work correctly with comprehensive test coverage (12/12 tests passing).
 
 **Next steps**: Consider additional recursive patterns:
 - `..` (all descendants, no field name)

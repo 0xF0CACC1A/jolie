@@ -86,7 +86,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -96,7 +96,7 @@ import jolie.lang.parse.ast.courier.NotificationForwardStatement;
 import jolie.lang.parse.ast.courier.SolicitResponseForwardStatement;
 import jolie.lang.parse.ast.expression.*;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 import jolie.lang.parse.ast.types.TypeChoiceDefinition;
 import jolie.lang.parse.ast.types.TypeDefinition;
 import jolie.lang.parse.ast.types.TypeDefinitionLink;
@@ -298,7 +298,7 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 	public void visit( CurrentValueNode n ) {}
 
 	@Override
-	public void visit( SelectPathNode n ) {}
+	public void visit( PathSpecNode n ) {}
 
 
 	public void visit( ProductExpressionNode n ) {}
@@ -337,7 +337,7 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 
 	public void visit( UndefStatement n ) {}
 
-	public void visit( SelectStatement n ) {}
+	public void visit( PathsStatement n ) {}
 
 	public void visit( ValueVectorSizeExpressionNode n ) {}
 
@@ -454,7 +454,7 @@ public class ProgramInspectorCreatorVisitor implements UnitOLVisitor {
 		n.elseExpression().accept( this );
 	}
 
-	public void visit( SelectExpressionNode n ) {
-		n.selectPath().accept( this );
+	public void visit( PathsExpressionNode n ) {
+		n.pathSpec().accept( this );
 	}
 }

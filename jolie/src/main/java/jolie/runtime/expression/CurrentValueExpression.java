@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.Collections;
 
 /**
- * Represents the current value ($) in SELECT WHERE expressions. Can optionally include field path
+ * Represents the current value ($) in PATHS WHERE expressions. Can optionally include field path
  * (e.g., $.field, $.field.subfield) or recursive field (e.g., $..field)
  */
 public class CurrentValueExpression implements Expression {

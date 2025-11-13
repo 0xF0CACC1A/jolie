@@ -100,7 +100,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -115,7 +115,7 @@ import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
@@ -124,7 +124,7 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
-import jolie.lang.parse.ast.expression.SelectExpressionNode;
+import jolie.lang.parse.ast.expression.PathsExpressionNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -976,8 +976,8 @@ public class SemanticVerifier implements UnitOLVisitor {
 	}
 
 	@Override
-	public void visit( SelectExpressionNode n ) {
-		n.selectPath().accept( this );
+	public void visit( PathsExpressionNode n ) {
+		n.pathSpec().accept( this );
 		n.whereExpression().accept( this );
 	}
 
@@ -1069,7 +1069,7 @@ public class SemanticVerifier implements UnitOLVisitor {
 	public void visit( CurrentValueNode n ) {}
 
 	@Override
-	public void visit( SelectPathNode n ) {
+	public void visit( PathSpecNode n ) {
 		// Visit the base variable
 		n.baseVariable().accept( this );
 	}
@@ -1224,9 +1224,9 @@ public class SemanticVerifier implements UnitOLVisitor {
 	}
 
 	@Override
-	public void visit( SelectStatement n ) {
-		// Visit SELECT path and WHERE expression
-		n.selectPath().accept( this );
+	public void visit( PathsStatement n ) {
+		// Visit PATHS path and WHERE expression
+		n.pathSpec().accept( this );
 		n.whereExpression().accept( this );
 	}
 

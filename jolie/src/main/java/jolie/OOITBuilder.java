@@ -105,7 +105,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -128,8 +128,8 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
-import jolie.lang.parse.ast.expression.SelectExpressionNode;
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathsExpressionNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -185,7 +185,7 @@ import jolie.process.SubtractAssignmentProcess;
 import jolie.process.SynchronizedProcess;
 import jolie.process.ThrowProcess;
 import jolie.process.UndefProcess;
-import jolie.process.SelectProcess;
+import jolie.process.PathsProcess;
 import jolie.process.WhileProcess;
 import jolie.process.courier.ForwardNotificationProcess;
 import jolie.process.courier.ForwardSolicitResponseProcess;
@@ -226,7 +226,7 @@ import jolie.runtime.expression.IsStringExpression;
 import jolie.runtime.expression.NotExpression;
 import jolie.runtime.expression.OrCondition;
 import jolie.runtime.expression.ProductExpression;
-import jolie.runtime.expression.SelectExpression;
+import jolie.runtime.expression.PathsExpression;
 import jolie.runtime.expression.SolicitResponseExpression;
 import jolie.runtime.expression.SumExpression;
 import jolie.runtime.expression.ValueVectorSizeExpression;
@@ -1497,18 +1497,18 @@ public class OOITBuilder implements UnitOLVisitor {
 	}
 
 	@Override
-	public void visit( SelectExpressionNode n ) {
-		currExpression = new SelectExpression(
-			buildVariablePath( n.selectPath().baseVariable() ),
-			n.selectPath().wildcardDepth(),
-			n.selectPath().recursiveField(),
+	public void visit( PathsExpressionNode n ) {
+		currExpression = new PathsExpression(
+			buildVariablePath( n.pathSpec().baseVariable() ),
+			n.pathSpec().wildcardDepth(),
+			n.pathSpec().recursiveField(),
 			buildExpression( n.whereExpression() ) );
 	}
 
 	@Override
-	public void visit( SelectPathNode n ) {
-		// SelectPathNode is handled inline in SelectStatement/SelectExpressionNode visitors
-		// No runtime representation needed for SelectPathNode itself
+	public void visit( PathSpecNode n ) {
+		// PathSpecNode is handled inline in PathsStatement/PathsExpressionNode visitors
+		// No runtime representation needed for PathSpecNode itself
 	}
 
 	@Override
@@ -1740,11 +1740,11 @@ public class OOITBuilder implements UnitOLVisitor {
 	}
 
 	@Override
-	public void visit( SelectStatement n ) {
-		currProcess = new SelectProcess(
-			buildVariablePath( n.selectPath().baseVariable() ),
-			n.selectPath().wildcardDepth(),
-			n.selectPath().recursiveField(),
+	public void visit( PathsStatement n ) {
+		currProcess = new PathsProcess(
+			buildVariablePath( n.pathSpec().baseVariable() ),
+			n.pathSpec().wildcardDepth(),
+			n.pathSpec().recursiveField(),
 			buildExpression( n.whereExpression() ) );
 	}
 

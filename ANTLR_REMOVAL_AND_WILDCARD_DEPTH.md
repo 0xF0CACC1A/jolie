@@ -18,13 +18,13 @@
 ## Overview
 
 ### Goal
-Completely remove ANTLR dependency from SELECT implementation and add support for multiple wildcard levels.
+Completely remove ANTLR dependency from PATHS implementation and add support for multiple wildcard levels.
 
 **Before:**
 ```jolie
 // Parse-time: Native Jolie
-// Runtime: ANTLR SelectQueryExecutor for path traversal
-result << select var.* where $ == 5
+// Runtime: ANTLR PathsQueryExecutor for path traversal
+result << paths var.* where $ == 5
                  ↑
         Converted to "$.*" string at runtime
         and parsed by ANTLR
@@ -34,15 +34,15 @@ result << select var.* where $ == 5
 ```jolie
 // Parse-time: Native Jolie
 // Runtime: Native NativePathCollector for path traversal
-result << select var.*.* where $.field > 10
+result << paths var.*.* where $.field > 10
                  ↑
         Fully native - no ANTLR at any stage
 ```
 
 ### What Changed
-1. **Removed SelectQueryExecutor.java** (ANTLR-based path traversal)
+1. **Removed PathsQueryExecutor.java** (ANTLR-based path traversal)
 2. **Created NativePathCollector.java** (pure Jolie API path traversal)
-3. **Changed SelectPathNode from boolean isWildcard to int wildcardDepth**
+3. **Changed PathSpecNode from boolean isWildcard to int wildcardDepth**
 4. **Added support for var.*.* (grandchildren), var.*.*.* (great-grandchildren), etc.**
 5. **Removed all ANTLR dependencies from pom.xml**
 6. **Deleted ANTLR grammar files and runtime jars**
@@ -76,14 +76,14 @@ result << select var.*.* where $.field > 10
 **Extensibility:**
 ```java
 // Old: boolean isWildcard
-select var.*     // isWildcard = true
-select var.*.* // Can't represent this!
+paths var.*     // isWildcard = true
+paths var.*.* // Can't represent this!
 
 // New: int wildcardDepth
-select var       // wildcardDepth = 0 (no wildcard)
-select var.*     // wildcardDepth = 1 (children)
-select var.*.*   // wildcardDepth = 2 (grandchildren)
-select var.*.*.* // wildcardDepth = 3 (great-grandchildren)
+paths var       // wildcardDepth = 0 (no wildcard)
+paths var.*     // wildcardDepth = 1 (children)
+paths var.*.*   // wildcardDepth = 2 (grandchildren)
+paths var.*.*.* // wildcardDepth = 3 (great-grandchildren)
 ```
 
 **Simplicity:**
@@ -99,28 +99,28 @@ select var.*.*.* // wildcardDepth = 3 (great-grandchildren)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select var.* where $ == 5                      │
+│ Jolie Code: paths var.* where $ == 5                      │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser (OLParser.java) - NATIVE                             │
 │   - Parses var.* natively                                   │
-│   - Creates SelectPathNode(var, isWildcard=true)            │
+│   - Creates PathSpecNode(var, isWildcard=true)            │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ AST: SelectStatement                                         │
-│   SelectPathNode(baseVariable=var, isWildcard=true)         │
+│ AST: PathsStatement                                         │
+│   PathSpecNode(baseVariable=var, isWildcard=true)         │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Runtime: SelectProcess/SelectExpression                     │
-│   VariablePath selectPath = var                             │
+│ Runtime: PathsProcess/PathsExpression                     │
+│   VariablePath pathSpec = var                             │
 │   boolean isWildcard = true                                 │
 │                                                              │
 │   ❌ Problem: Convert to ANTLR string at runtime            │
 │   String query = isWildcard ? "$.*" : "$"                   │
-│   SelectQueryExecutor.execute(source, query, ...)  ← ANTLR! │
+│   PathsQueryExecutor.execute(source, query, ...)  ← ANTLR! │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -128,23 +128,23 @@ select var.*.*.* // wildcardDepth = 3 (great-grandchildren)
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select var.*.* where $.field > 10              │
+│ Jolie Code: paths var.*.* where $.field > 10              │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser (OLParser.java) - NATIVE                             │
 │   - Counts wildcard levels with while loop                  │
-│   - Creates SelectPathNode(var, wildcardDepth=2)            │
+│   - Creates PathSpecNode(var, wildcardDepth=2)            │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ AST: SelectStatement                                         │
-│   SelectPathNode(baseVariable=var, wildcardDepth=2)         │
+│ AST: PathsStatement                                         │
+│   PathSpecNode(baseVariable=var, wildcardDepth=2)         │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Runtime: SelectProcess/SelectExpression                     │
-│   VariablePath selectPath = var                             │
+│ Runtime: PathsProcess/PathsExpression                     │
+│   VariablePath pathSpec = var                             │
 │   int wildcardDepth = 2                                     │
 │                                                              │
 │   ✅ Solution: Native path traversal                         │
@@ -157,13 +157,13 @@ select var.*.*.* // wildcardDepth = 3 (great-grandchildren)
 
 ## Key Design Changes
 
-### Change 1: SelectPathNode Field Type
+### Change 1: PathSpecNode Field Type
 
-**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java`
+**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java`
 
 **Before:**
 ```java
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;
     private final boolean isWildcard;  // ← Can only represent 0 or 1 level
 
@@ -175,7 +175,7 @@ public class SelectPathNode extends OLSyntaxNode {
 
 **After:**
 ```java
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;
     private final int wildcardDepth;  // ← Can represent 0, 1, 2, 3, ... levels
 
@@ -195,30 +195,30 @@ public class SelectPathNode extends OLSyntaxNode {
 ### Change 2: Runtime Signature Change
 
 **Files**:
-- `jolie/src/main/java/jolie/process/SelectProcess.java`
-- `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+- `jolie/src/main/java/jolie/process/PathsProcess.java`
+- `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
 
 **Before:**
 ```java
-public class SelectProcess implements Process {
-    private final VariablePath selectPath;
+public class PathsProcess implements Process {
+    private final VariablePath pathSpec;
     private final boolean isWildcard;
 
-    public SelectProcess(VariablePath selectPath, boolean isWildcard, ...) {
+    public PathsProcess(VariablePath pathSpec, boolean isWildcard, ...) {
         // Convert to ANTLR string at runtime
         String query = isWildcard ? "$.*" : "$";
-        SelectQueryExecutor.execute(source, query, ...);  // ← ANTLR dependency
+        PathsQueryExecutor.execute(source, query, ...);  // ← ANTLR dependency
     }
 }
 ```
 
 **After:**
 ```java
-public class SelectProcess implements Process {
-    private final VariablePath selectPath;
+public class PathsProcess implements Process {
+    private final VariablePath pathSpec;
     private final int wildcardDepth;
 
-    public SelectProcess(VariablePath selectPath, int wildcardDepth, ...) {
+    public PathsProcess(VariablePath pathSpec, int wildcardDepth, ...) {
         // Use native path collector
         NativePathCollector.collectPaths(vec, rootPath, wildcardDepth);  // ← Pure Jolie
     }
@@ -229,9 +229,9 @@ public class SelectProcess implements Process {
 
 ## Implementation Steps
 
-### Step 1: Change SelectPathNode to Use wildcardDepth
+### Step 1: Change PathSpecNode to Use wildcardDepth
 
-**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java`
+**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java`
 
 **Changes**:
 1. Replace `boolean isWildcard` with `int wildcardDepth`
@@ -241,11 +241,11 @@ public class SelectProcess implements Process {
 
 **Code**:
 ```java
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;
     private final int wildcardDepth;
 
-    public SelectPathNode(ParsingContext context,
+    public PathSpecNode(ParsingContext context,
                          VariablePathNode baseVariable,
                          int wildcardDepth) {
         super(context);
@@ -279,14 +279,14 @@ public class SelectPathNode extends OLSyntaxNode {
 
 **File**: `libjolie/src/main/java/jolie/lang/parse/OLParser.java`
 
-**Location 1: SELECT Statement** (line ~2515)
+**Location 1: PATHS Statement** (line ~2515)
 
 **Before:**
 ```java
-case SELECT:
+case PATHS:
     nextToken();
 
-    assertIdentifier("expected variable name after SELECT");
+    assertIdentifier("expected variable name after PATHS");
     String varId = token.content();
     nextToken();
 
@@ -298,20 +298,20 @@ case SELECT:
     // Check if there's a DOT (for wildcard syntax var.*)
     if (token.is(Scanner.TokenType.DOT)) {
         nextToken(); // eat DOT
-        eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+        eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
         isWildcard = true;
     }
 
-    SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, isWildcard);
+    PathSpecNode pathSpec = new PathSpecNode(getContext(), baseVar, isWildcard);
     break;
 ```
 
 **After:**
 ```java
-case SELECT:
+case PATHS:
     nextToken();
 
-    assertIdentifier("expected variable name after SELECT");
+    assertIdentifier("expected variable name after PATHS");
     String varId = token.content();
     nextToken();
 
@@ -323,28 +323,28 @@ case SELECT:
     // Count wildcard levels (e.g., .* is 1, .*.* is 2)
     while (token.is(Scanner.TokenType.DOT)) {
         nextToken(); // eat DOT
-        eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+        eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
         wildcardDepth++;
     }
 
-    SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, wildcardDepth);
+    PathSpecNode pathSpec = new PathSpecNode(getContext(), baseVar, wildcardDepth);
     break;
 ```
 
 **Key change**: `if` → `while` loop to count multiple `.*` occurrences.
 
-**Token sequence for `select var.*.*`**:
+**Token sequence for `paths var.*.*`**:
 ```
-Tokens: SELECT ID(var) DOT ASTERISK DOT ASTERISK WHERE ...
+Tokens: PATHS ID(var) DOT ASTERISK DOT ASTERISK WHERE ...
         ↑      ↑        ↑   ↑        ↑   ↑
         eat    eat      ↓   ↓        ↓   ↓
                        Loop iteration 1  Loop iteration 2
                        wildcardDepth=1   wildcardDepth=2
 ```
 
-**Location 2: SELECT Expression** (line ~3720)
+**Location 2: PATHS Expression** (line ~3720)
 
-Identical change needed for expression variant of SELECT.
+Identical change needed for expression variant of PATHS.
 
 ### Step 3: Update OLParseTreeOptimizer
 
@@ -353,8 +353,8 @@ Identical change needed for expression variant of SELECT.
 **Before:**
 ```java
 @Override
-public void visit(SelectPathNode n) {
-    currNode = new SelectPathNode(
+public void visit(PathSpecNode n) {
+    currNode = new PathSpecNode(
         n.context(),
         optimizePath(n.baseVariable()),
         n.isWildcard());  // ← boolean
@@ -364,8 +364,8 @@ public void visit(SelectPathNode n) {
 **After:**
 ```java
 @Override
-public void visit(SelectPathNode n) {
-    currNode = new SelectPathNode(
+public void visit(PathSpecNode n) {
+    currNode = new PathSpecNode(
         n.context(),
         optimizePath(n.baseVariable()),
         n.wildcardDepth());  // ← int
@@ -378,15 +378,15 @@ public void visit(SelectPathNode n) {
 
 **File**: `jolie/src/main/java/jolie/OOITBuilder.java`
 
-**Location 1: SelectStatement** (line ~1738)
+**Location 1: PathsStatement** (line ~1738)
 
 **Before:**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().isWildcard(),  // ← boolean
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().isWildcard(),  // ← boolean
         buildExpression(n.whereExpression()));
 }
 ```
@@ -394,72 +394,72 @@ public void visit(SelectStatement n) {
 **After:**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().wildcardDepth(),  // ← int
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().wildcardDepth(),  // ← int
         buildExpression(n.whereExpression()));
 }
 ```
 
-**Location 2: SelectExpressionNode** (line ~1496)
+**Location 2: PathsExpressionNode** (line ~1496)
 
 Identical change for expression variant.
 
 ### Step 5: Update Runtime Classes
 
 **Files**:
-- `jolie/src/main/java/jolie/process/SelectProcess.java`
-- `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+- `jolie/src/main/java/jolie/process/PathsProcess.java`
+- `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
 
-**SelectProcess.java Before:**
+**PathsProcess.java Before:**
 ```java
-public class SelectProcess implements Process {
-    private final VariablePath selectPath;
+public class PathsProcess implements Process {
+    private final VariablePath pathSpec;
     private final boolean isWildcard;
 
-    public SelectProcess(VariablePath selectPath, boolean isWildcard,
+    public PathsProcess(VariablePath pathSpec, boolean isWildcard,
                         Expression whereExpression) {
-        this.selectPath = selectPath;
+        this.pathSpec = pathSpec;
         this.isWildcard = isWildcard;
         this.whereExpression = whereExpression;
     }
 
     @Override
     public void run() {
-        String rootPath = extractRootPath(selectPath);
-        ValueVector vec = selectPath.getValueVector();
+        String rootPath = extractRootPath(pathSpec);
+        ValueVector vec = pathSpec.getValueVector();
         Object source = vec.size() > 1 ? vec : vec.first();
 
         // ❌ Convert to ANTLR string
-        String selectQuery = isWildcard ? "$.*" : "$";
+        String pathsQuery = isWildcard ? "$.*" : "$";
 
         // ❌ Call ANTLR-based executor
-        List<String> candidatePaths = SelectQueryExecutor.execute(
-            source, selectQuery, null, rootPath);
+        List<String> candidatePaths = PathsQueryExecutor.execute(
+            source, pathsQuery, null, rootPath);
 
         // Filter with WHERE clause...
     }
 }
 ```
 
-**SelectProcess.java After:**
+**PathsProcess.java After:**
 ```java
-public class SelectProcess implements Process {
-    private final VariablePath selectPath;
+public class PathsProcess implements Process {
+    private final VariablePath pathSpec;
     private final int wildcardDepth;
 
-    public SelectProcess(VariablePath selectPath, int wildcardDepth,
+    public PathsProcess(VariablePath pathSpec, int wildcardDepth,
                         Expression whereExpression) {
-        this.selectPath = selectPath;
+        this.pathSpec = pathSpec;
         this.wildcardDepth = wildcardDepth;
         this.whereExpression = whereExpression;
     }
 
     @Override
     public void run() {
-        String rootPath = extractRootPath(selectPath);
-        ValueVector vec = selectPath.getValueVector();
+        String rootPath = extractRootPath(pathSpec);
+        ValueVector vec = pathSpec.getValueVector();
 
         // ✅ Use native path collector
         List<String> candidatePaths = NativePathCollector.collectPaths(
@@ -472,22 +472,22 @@ public class SelectProcess implements Process {
 
 **Key changes**:
 1. `boolean isWildcard` → `int wildcardDepth`
-2. Remove `SelectQueryExecutor` import
+2. Remove `PathsQueryExecutor` import
 3. Add `NativePathCollector` import
-4. Call `NativePathCollector.collectPaths()` instead of `SelectQueryExecutor.execute()`
+4. Call `NativePathCollector.collectPaths()` instead of `PathsQueryExecutor.execute()`
 
 **Update copy() method**:
 ```java
 @Override
 public Process copy(TransformationReason reason) {
-    return new SelectProcess(
-        (VariablePath) selectPath.cloneExpression(reason),
+    return new PathsProcess(
+        (VariablePath) pathSpec.cloneExpression(reason),
         wildcardDepth,  // ← int, not boolean
         whereExpression.cloneExpression(reason));
 }
 ```
 
-Identical changes needed in `SelectExpression.java`.
+Identical changes needed in `PathsExpression.java`.
 
 ---
 
@@ -495,7 +495,7 @@ Identical changes needed in `SelectExpression.java`.
 
 ### Overview
 
-**File**: `jolie/src/main/java/jolie/runtime/select/NativePathCollector.java` (NEW)
+**File**: `jolie/src/main/java/jolie/runtime/paths/NativePathCollector.java` (NEW)
 
 **Purpose**: Traverse Value trees and collect paths at specified depth using native Jolie API.
 
@@ -509,7 +509,7 @@ Identical changes needed in `SelectExpression.java`.
 ### Implementation
 
 ```java
-package jolie.runtime.select;
+package jolie.runtime.paths;
 
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
@@ -517,7 +517,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Native path collector for SELECT operations without ANTLR dependency.
+ * Native path collector for PATHS operations without ANTLR dependency.
  * Collects paths from a Value tree based on wildcard depth.
  */
 public class NativePathCollector {
@@ -528,10 +528,10 @@ public class NativePathCollector {
      * @param vec ValueVector to traverse
      * @param rootPath Base path (e.g., "tree")
      * @param wildcardDepth How many wildcard levels:
-     *                      0 = root only (select var)
-     *                      1 = children (select var.*)
-     *                      2 = grandchildren (select var.*.*)
-     *                      3 = great-grandchildren (select var.*.*.*)
+     *                      0 = root only (paths var)
+     *                      1 = children (paths var.*)
+     *                      2 = grandchildren (paths var.*.*)
+     *                      3 = great-grandchildren (paths var.*.*.*)
      * @return List of paths at the specified depth
      */
     public static List<String> collectPaths(ValueVector vec, String rootPath,
@@ -583,7 +583,7 @@ tree.a = 5;
 tree.b = 6;
 tree.c = 7;
 
-select tree.* where $ > 5
+paths tree.* where $ > 5
 ```
 
 **Execution**:
@@ -608,7 +608,7 @@ tree.a.x = 1;
 tree.a.y = 2;
 tree.b.z = 3;
 
-select tree.*.* where $ > 0
+paths tree.*.* where $ > 0
 ```
 
 **Execution**:
@@ -660,7 +660,7 @@ In Jolie (like Perl), accessing a non-existent path **creates it**:
 value = x.y.z;  // ❌ CREATES x.y.z with undefined value!
 ```
 
-This is problematic for SELECT because:
+This is problematic for PATHS because:
 1. Reading shouldn't modify data
 2. Can create unexpected paths
 3. Breaks referential transparency
@@ -757,31 +757,31 @@ if (!childVector.isEmpty()) {  // ✅ Check before accessing
 ### Syntax Examples
 
 ```jolie
-// 0 wildcards - select single variable
-select myvar where $ == 5
+// 0 wildcards - paths single variable
+paths myvar where $ == 5
 // Returns: ["myvar"] if myvar equals 5
 
-// 1 wildcard - select direct children
-select tree.* where $ > 10
+// 1 wildcard - paths direct children
+paths tree.* where $ > 10
 // Returns: ["tree.a", "tree.b", ...] for children matching condition
 
-// 2 wildcards - select grandchildren
-select tree.*.* where $.value < 100
+// 2 wildcards - paths grandchildren
+paths tree.*.* where $.value < 100
 // Returns: ["tree.a.x", "tree.a.y", "tree.b.z", ...] for grandchildren
 
-// 3 wildcards - select great-grandchildren
-select data.*.*.* where $ has .timestamp
+// 3 wildcards - paths great-grandchildren
+paths data.*.*.* where $ has .timestamp
 // Returns all great-grandchildren with timestamp field
 ```
 
 ### Parsing Strategy
 
-**Token sequence for `select tree.*.*`**:
+**Token sequence for `paths tree.*.*`**:
 ```
-Input tokens: SELECT ID(tree) DOT ASTERISK DOT ASTERISK WHERE ...
+Input tokens: PATHS ID(tree) DOT ASTERISK DOT ASTERISK WHERE ...
 
 Parser state:
-1. Eat SELECT
+1. Eat PATHS
 2. Eat ID → varId = "tree"
 3. wildcardDepth = 0
 4. Loop:
@@ -804,7 +804,7 @@ int wildcardDepth = 0;
 // Count wildcard levels
 while (token.is(Scanner.TokenType.DOT)) {
     nextToken(); // eat DOT
-    eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+    eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
     wildcardDepth++;
 }
 ```
@@ -817,7 +817,7 @@ while (token.is(Scanner.TokenType.DOT)) {
 
 ### Runtime Behavior
 
-**wildcardDepth=0 (select var)**:
+**wildcardDepth=0 (paths var)**:
 ```java
 if (wildcardDepth == 0) {
     // No traversal needed, just return root
@@ -825,14 +825,14 @@ if (wildcardDepth == 0) {
 }
 ```
 
-**wildcardDepth=1 (select var.*)**:
+**wildcardDepth=1 (paths var.*)**:
 ```java
 // Traverse 1 level deep
 collectPathsRecursive(root, "tree", 1, paths);
 // Collects: tree.a, tree.b, tree.c
 ```
 
-**wildcardDepth=2 (select var.*.*)**:
+**wildcardDepth=2 (paths var.*.*)**:
 ```java
 // Traverse 2 levels deep
 collectPathsRecursive(root, "tree", 2, paths);
@@ -850,10 +850,10 @@ tree
 └── b
     └── z = 3
 
-select tree       → ["tree"]           (depth 0)
-select tree.*     → ["tree.a",         (depth 1)
+paths tree       → ["tree"]           (depth 0)
+paths tree.*     → ["tree.a",         (depth 1)
                      "tree.b"]
-select tree.*.*   → ["tree.a.x",       (depth 2)
+paths tree.*.*   → ["tree.a.x",       (depth 2)
                      "tree.a.y",
                      "tree.b.z"]
 ```
@@ -866,7 +866,7 @@ select tree.*.*   → ["tree.a.x",       (depth 2)
 
 ### Test Suite Updates
 
-**File**: `test/select/run_native_tests.py`
+**File**: `test/paths/run_native_tests.py`
 
 **Changes**:
 1. Removed ANTLR jar copying
@@ -876,10 +876,10 @@ select tree.*.*   → ["tree.a.x",       (depth 2)
 
 ### New Test: Grandchildren Selection
 
-**File**: `test/select/test_grandchildren.ol`
+**File**: `test/paths/test_grandchildren.ol`
 
 ```jolie
-// Test: Native SELECT with multiple wildcard levels (var.*.*)
+// Test: Native PATHS with multiple wildcard levels (var.*.*)
 // Expected output: tree.a.x, tree.a.y, tree.b.z
 
 include "console.iol"
@@ -890,7 +890,7 @@ main {
     tree.b.z = 3;
 
     // Should return all grandchildren: tree.a.x, tree.a.y, tree.b.z
-    res << select tree.*.* where $ > 0;
+    res << paths tree.*.* where $ > 0;
 
     i = 0;
     while (i < #res.results) {
@@ -913,7 +913,7 @@ tree.b.z
 
 **Before (ANTLR order)**:
 ```
-select tree.* where $ == 5
+paths tree.* where $ == 5
 tree.a = 5, tree.b = 6, tree.c = 5
 
 Output: tree.c, tree.a  (reversed - stack-based)
@@ -921,7 +921,7 @@ Output: tree.c, tree.a  (reversed - stack-based)
 
 **After (native order)**:
 ```
-select tree.* where $ == 5
+paths tree.* where $ == 5
 tree.a = 5, tree.b = 6, tree.c = 5
 
 Output: tree.a, tree.c  (insertion order)
@@ -936,19 +936,19 @@ Output: tree.a, tree.c  (insertion order)
 
 ```
 ============================================================
-Native SELECT Syntax Tests
+Native PATHS Syntax Tests
 ============================================================
 
-✓ test_native_wildcard.ol          (select tree.* where $ == 5)
-✓ test_native_simple_value.ol      (select data.* where $ == 100)
-✓ test_native_greater_than.ol      (select items.* where $ > 10)
-✓ test_native_string_match.ol      (select fruits.* where $ == "apple")
-✓ test_native_not_equal.ol         (select vals.* where $ != 2)
-✓ test_select_single.ol            (select myvar where $ == 5)
-✓ test_select_single_no_match.ol   (select myvar where $ == 5, myvar=10)
-✓ test_dollar_field.ol             (select tree.* where $.value > 10)
-✓ test_dollar_nested_field.ol      (select items.* where $.data.score > 10)
-✓ test_grandchildren.ol            (select tree.*.* where $ > 0)
+✓ test_native_wildcard.ol          (paths tree.* where $ == 5)
+✓ test_native_simple_value.ol      (paths data.* where $ == 100)
+✓ test_native_greater_than.ol      (paths items.* where $ > 10)
+✓ test_native_string_match.ol      (paths fruits.* where $ == "apple")
+✓ test_native_not_equal.ol         (paths vals.* where $ != 2)
+✓ test_select_single.ol            (paths myvar where $ == 5)
+✓ test_select_single_no_match.ol   (paths myvar where $ == 5, myvar=10)
+✓ test_dollar_field.ol             (paths tree.* where $.value > 10)
+✓ test_dollar_nested_field.ol      (paths items.* where $.data.score > 10)
+✓ test_grandchildren.ol            (paths tree.*.* where $ > 0)
 
 ============================================================
 ✓ ALL PASSED (10/10)
@@ -961,27 +961,27 @@ Native SELECT Syntax Tests
 
 ### Files Deleted (3)
 
-1. **jolie/src/main/java/jolie/runtime/select/SelectQueryExecutor.java**
+1. **jolie/src/main/java/jolie/runtime/paths/PathsQueryExecutor.java**
    - **Lines**: 293
    - **Purpose**: ANTLR-based path traversal (no longer needed)
 
-2. **libjolie/src/main/antlr4/jolie/lang/parse/select/SelectQuery.g4**
+2. **libjolie/src/main/antlr4/jolie/lang/parse/paths/SelectQuery.g4**
    - **Lines**: ~100
-   - **Purpose**: ANTLR grammar for SELECT paths (obsolete)
+   - **Purpose**: ANTLR grammar for PATHS paths (obsolete)
 
-3. **test/select/antlr4-runtime-4.13.1.jar**
+3. **test/paths/antlr4-runtime-4.13.1.jar**
    - **Size**: ~500KB
    - **Purpose**: ANTLR runtime dependency (removed)
 
 ### Files Created (1)
 
-1. **jolie/src/main/java/jolie/runtime/select/NativePathCollector.java**
+1. **jolie/src/main/java/jolie/runtime/paths/NativePathCollector.java**
    - **Lines**: 54
-   - **Purpose**: Native path traversal replacing SelectQueryExecutor
+   - **Purpose**: Native path traversal replacing PathsQueryExecutor
 
 ### Files Modified - Critical (8)
 
-1. **libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java**
+1. **libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java**
    - **Lines changed**: 10
    - **Changes**:
      - `boolean isWildcard` → `int wildcardDepth`
@@ -1004,20 +1004,20 @@ Native SELECT Syntax Tests
    - **Lines changed**: 4 (2 locations)
    - **Changes**:
      - Pass `wildcardDepth()` to runtime constructors
-     - Update both SelectStatement and SelectExpressionNode visitors
+     - Update both PathsStatement and PathsExpressionNode visitors
 
-5. **jolie/src/main/java/jolie/process/SelectProcess.java**
+5. **jolie/src/main/java/jolie/process/PathsProcess.java**
    - **Lines changed**: 25
    - **Changes**:
      - Replace `boolean isWildcard` with `int wildcardDepth`
-     - Remove `SelectQueryExecutor` import
+     - Remove `PathsQueryExecutor` import
      - Add `NativePathCollector` import
-     - Call `NativePathCollector.collectPaths()` instead of `SelectQueryExecutor.execute()`
+     - Call `NativePathCollector.collectPaths()` instead of `PathsQueryExecutor.execute()`
      - Add `hasChildren()` checks in `getValueAtPath()`
 
-6. **jolie/src/main/java/jolie/runtime/expression/SelectExpression.java**
+6. **jolie/src/main/java/jolie/runtime/expression/PathsExpression.java**
    - **Lines changed**: 25
-   - **Changes**: (identical to SelectProcess)
+   - **Changes**: (identical to PathsProcess)
 
 7. **libjolie/pom.xml**
    - **Lines changed**: 22
@@ -1025,7 +1025,7 @@ Native SELECT Syntax Tests
      - Remove antlr4-maven-plugin
      - Remove antlr4-runtime dependency
 
-8. **test/select/run_native_tests.py**
+8. **test/paths/run_native_tests.py**
    - **Lines changed**: 8
    - **Changes**:
      - Remove ANTLR jar copying
@@ -1035,7 +1035,7 @@ Native SELECT Syntax Tests
 
 ### Test Files Created (1)
 
-9. **test/select/test_grandchildren.ol**
+9. **test/paths/test_grandchildren.ol**
    - **Lines**: 18
    - **Purpose**: Test var.*.* (2-level wildcard)
 
@@ -1045,7 +1045,7 @@ Native SELECT Syntax Tests
 - **Files created**: 2 (1 source + 1 test)
 - **Files modified**: 8
 - **Net reduction**: 1 file (-3 +2)
-- **Lines of code**: -293 (SelectQueryExecutor) +54 (NativePathCollector) = **-239 lines**
+- **Lines of code**: -293 (PathsQueryExecutor) +54 (NativePathCollector) = **-239 lines**
 
 ---
 
@@ -1073,14 +1073,14 @@ Native SELECT Syntax Tests
 Before:
 ```jolie
 tree.a = 1; tree.b = 2; tree.c = 3;
-select tree.* where $ > 0
+paths tree.* where $ > 0
 → ["tree.c", "tree.b", "tree.a"]  // Reversed!
 ```
 
 After:
 ```jolie
 tree.a = 1; tree.b = 2; tree.c = 3;
-select tree.* where $ > 0
+paths tree.* where $ > 0
 → ["tree.a", "tree.b", "tree.c"]  // Correct insertion order
 ```
 
@@ -1103,12 +1103,12 @@ if (!current.hasChildren(fieldName))
 
 Before:
 ```jolie
-select "$.*" from nonexistent where $ == 5  // String - no validation
+paths "$.*" from nonexistent where $ == 5  // String - no validation
 ```
 
 After:
 ```jolie
-select nonexistent.* where $ == 5  // Error: variable not in scope
+paths nonexistent.* where $ == 5  // Error: variable not in scope
 ```
 
 ### Memory Improvements
@@ -1127,31 +1127,31 @@ select nonexistent.* where $ == 5  // Error: variable not in scope
 **Old syntax still works temporarily**:
 ```jolie
 // Old syntax (will be removed eventually)
-result << select "$.*" from tree where $ == 5
+result << paths "$.*" from tree where $ == 5
 ```
 
 **New syntax (recommended)**:
 ```jolie
 // New syntax (use this)
-result << select tree.* where $ == 5
+result << paths tree.* where $ == 5
 ```
 
 **New features**:
 ```jolie
 // Single variable selection
-result << select myvar where $ > 100
+result << paths myvar where $ > 100
 
 // Multiple wildcard levels
-result << select tree.*.* where $.value < 50
+result << paths tree.*.* where $.value < 50
 ```
 
 ### For Developers
 
-**If you were using SelectQueryExecutor**:
+**If you were using PathsQueryExecutor**:
 
 Before:
 ```java
-List<String> paths = SelectQueryExecutor.execute(
+List<String> paths = PathsQueryExecutor.execute(
     source, "$.*", null, "tree");
 ```
 
@@ -1165,20 +1165,20 @@ List<String> paths = NativePathCollector.collectPaths(
 
 Before:
 ```java
-if (selectPath.isWildcard()) {
+if (pathSpec.isWildcard()) {
     // handle wildcard case
 }
 ```
 
 After:
 ```java
-if (selectPath.wildcardDepth() > 0) {
+if (pathSpec.wildcardDepth() > 0) {
     // handle wildcard case
-    int depth = selectPath.wildcardDepth();
+    int depth = pathSpec.wildcardDepth();
 }
 
 // Or use compatibility helper:
-if (selectPath.isWildcard()) {
+if (pathSpec.isWildcard()) {
     // Still works!
 }
 ```
@@ -1198,18 +1198,18 @@ if (selectPath.isWildcard()) {
 
 **Array wildcards**:
 ```jolie
-select items.[*] where $ > 10      // All array elements
-select items.[0:5] where $ < 100   // Array slice
+paths items.[*] where $ > 10      // All array elements
+paths items.[0:5] where $ < 100   // Array slice
 ```
 
 **Recursive descent**:
 ```jolie
-select tree..value where $ > 50    // Find all "value" fields recursively
+paths tree..value where $ > 50    // Find all "value" fields recursively
 ```
 
 **Nested paths**:
 ```jolie
-select data.users.*.profile.email where $ == "admin@example.com"
+paths data.users.*.profile.email where $ == "admin@example.com"
 ```
 
 ---
@@ -1218,7 +1218,7 @@ select data.users.*.profile.email where $ == "admin@example.com"
 
 This refactoring achieved:
 
-1. **Complete ANTLR removal** from SELECT implementation
+1. **Complete ANTLR removal** from PATHS implementation
 2. **Multiple wildcard level support** (var.*.*, var.*.*.*, etc.)
 3. **Vivification prevention** throughout path access
 4. **Better correctness** (insertion order, no accidental creation)
@@ -1232,4 +1232,4 @@ This refactoring achieved:
 - Added `hasChildren()` checks everywhere to prevent vivification
 - Maintained backward compatibility with `isWildcard()` helper method
 
-**Result**: SELECT is now fully native Jolie at both parse-time and runtime, with support for arbitrary wildcard depth and better correctness guarantees.
+**Result**: PATHS is now fully native Jolie at both parse-time and runtime, with support for arbitrary wildcard depth and better correctness guarantees.

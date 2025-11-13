@@ -6,24 +6,24 @@ import jolie.runtime.ValueVector;
 import jolie.runtime.VariablePath;
 import jolie.runtime.expression.Expression;
 import jolie.runtime.expression.CurrentValueExpression;
-import jolie.runtime.select.NativePathCollector;
+import jolie.runtime.paths.NativePathCollector;
 import java.util.List;
 import java.util.ArrayList;
 
-public class SelectProcess implements Process {
-	private final VariablePath selectPath;
+public class PathsProcess implements Process {
+	private final VariablePath pathSpec;
 	private final int wildcardDepth;
 	private final String recursiveField;
 	private final Expression whereExpression;
 
-	public SelectProcess( VariablePath selectPath, int wildcardDepth,
+	public PathsProcess( VariablePath pathSpec, int wildcardDepth,
 		Expression whereExpression ) {
-		this( selectPath, wildcardDepth, null, whereExpression );
+		this( pathSpec, wildcardDepth, null, whereExpression );
 	}
 
-	public SelectProcess( VariablePath selectPath, int wildcardDepth, String recursiveField,
+	public PathsProcess( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		Expression whereExpression ) {
-		this.selectPath = selectPath;
+		this.pathSpec = pathSpec;
 		this.wildcardDepth = wildcardDepth;
 		this.recursiveField = recursiveField;
 		this.whereExpression = whereExpression;
@@ -31,8 +31,8 @@ public class SelectProcess implements Process {
 
 	@Override
 	public Process copy( TransformationReason reason ) {
-		return new SelectProcess(
-			(VariablePath) selectPath.cloneExpression( reason ),
+		return new PathsProcess(
+			(VariablePath) pathSpec.cloneExpression( reason ),
 			wildcardDepth,
 			recursiveField,
 			whereExpression.cloneExpression( reason ) );
@@ -43,8 +43,8 @@ public class SelectProcess implements Process {
 		if( ExecutionThread.currentThread().isKilled() )
 			return;
 
-		String rootPath = extractRootPath( selectPath );
-		ValueVector vec = selectPath.getValueVector();
+		String rootPath = extractRootPath( pathSpec );
+		ValueVector vec = pathSpec.getValueVector();
 
 		// Use native path collector
 		List< String > candidatePaths;
@@ -57,8 +57,8 @@ public class SelectProcess implements Process {
 		}
 
 		// Filter candidates using native Jolie WHERE expression
-		// Note: SELECT as a statement (without <<) has no effect since there's no INTO variable
-		// Use SELECT as an expression with << operator for meaningful results
+		// Note: PATHS as a statement (without <<) has no effect since there's no INTO variable
+		// Use PATHS as an expression with << operator for meaningful results
 		List< String > matchingPaths = new ArrayList<>();
 		List< CurrentValueExpression > currentValueExprs = new ArrayList<>();
 		findAllCurrentValueExpressions( whereExpression, currentValueExprs );
@@ -79,7 +79,7 @@ public class SelectProcess implements Process {
 			}
 		}
 
-		// Results are computed but not stored (use SELECT expression with << instead)
+		// Results are computed but not stored (use PATHS expression with << instead)
 	}
 
 	private void findAllCurrentValueExpressions( Expression expr, List< CurrentValueExpression > result ) {

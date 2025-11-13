@@ -12,7 +12,7 @@ main {
 
     users[2].name = "Charlie";
 
-    select "$[*]" into results from users where ".settings.notifications in .";
+    paths "$[*]" into results from users where ".settings.notifications in .";
 
     i = 0;
     while( i < #results ) {

@@ -1,4 +1,4 @@
-# Converting SELECT WHERE Clause from ANTLR Strings to Native Jolie Expressions
+# Converting PATHS WHERE Clause from ANTLR Strings to Native Jolie Expressions
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -15,17 +15,17 @@
 ## Overview
 
 ### Goal
-Convert the SELECT primitive's WHERE clause from ANTLR-parsed strings to native Jolie expressions.
+Convert the PATHS primitive's WHERE clause from ANTLR-parsed strings to native Jolie expressions.
 
 **Before:**
 ```jolie
-select "$.*" into results from root where ". == 10"
+paths "$.*" into results from root where ". == 10"
                                           ↑ ANTLR string
 ```
 
 **After:**
 ```jolie
-select "$.*" into results from root where $ == 10
+paths "$.*" into results from root where $ == 10
                                           ↑ Native Jolie expression
 ```
 
@@ -49,25 +49,25 @@ The WHERE clause needs a special `$` operator to reference "the current value be
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select "$.*" ... where ". == 10"                │
+│ Jolie Code: paths "$.*" ... where ". == 10"                │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser (OLParser.java)                                       │
-│   - SELECT query: string → stored as String                  │
+│   - PATHS query: string → stored as String                  │
 │   - WHERE query:  string → stored as String                  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ AST: SelectStatement                                         │
-│   String selectQuery = "$.*"                                 │
+│ AST: PathsStatement                                         │
+│   String pathsQuery = "$.*"                                 │
 │   VariablePathNode intoVariable = results                    │
 │   VariablePathNode fromVariable = root                       │
 │   String whereQuery = ". == 10"    ← STRING                  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Runtime: SelectProcess                                       │
+│ Runtime: PathsProcess                                       │
 │   - Pass whereQuery string to ANTLR parser                   │
 │   - WhereEvaluator parses ". == 10" at runtime               │
 │   - Custom WhereEvaluator logic for `.`, `==`, `&&`, etc.    │
@@ -78,7 +78,7 @@ The WHERE clause needs a special `$` operator to reference "the current value be
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select "$.*" ... where $ == 10                   │
+│ Jolie Code: paths "$.*" ... where $ == 10                   │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
@@ -89,7 +89,7 @@ The WHERE clause needs a special `$` operator to reference "the current value be
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser (OLParser.java)                                       │
-│   - SELECT query: string → stored as String                  │
+│   - PATHS query: string → stored as String                  │
 │   - WHERE clause: parseExpression() → OLSyntaxNode tree      │
 │     ├─ CompareConditionNode                                  │
 │     │   ├─ left: CurrentValueNode ($)                        │
@@ -104,8 +104,8 @@ The WHERE clause needs a special `$` operator to reference "the current value be
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ AST: SelectStatement                                         │
-│   String selectQuery = "$.*"                                 │
+│ AST: PathsStatement                                         │
+│   String pathsQuery = "$.*"                                 │
 │   VariablePathNode intoVariable = results                    │
 │   VariablePathNode fromVariable = root                       │
 │   OLSyntaxNode whereExpression = <AST tree>  ← EXPRESSION   │
@@ -119,7 +119,7 @@ The WHERE clause needs a special `$` operator to reference "the current value be
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Runtime: SelectProcess                                       │
+│ Runtime: PathsProcess                                       │
 │   Expression whereExpression (CompareCondition)              │
 │   ├─ left: CurrentValueExpression (dynamic)                  │
 │   └─ right: ValueImpl (constant 10)                          │
@@ -141,7 +141,7 @@ In JSONPath and similar query languages, you need to reference "the current item
 
 ```jolie
 // Find all prices equal to 10
-select "$.items[*].price" into results from data where $ == 10
+paths "$.items[*].price" into results from data where $ == 10
                                                       ↑
                                             Current value (price)
 ```
@@ -224,7 +224,7 @@ import jolie.lang.parse.ast.OLSyntaxNode;
 import jolie.lang.parse.context.ParsingContext;
 
 /**
- * Represents the current value ($) in a SELECT WHERE expression.
+ * Represents the current value ($) in a PATHS WHERE expression.
  */
 public class CurrentValueNode extends OLSyntaxNode {
 
@@ -258,7 +258,7 @@ import jolie.process.TransformationReason;
 import jolie.runtime.Value;
 
 /**
- * Represents the current value ($) in SELECT WHERE expressions.
+ * Represents the current value ($) in PATHS WHERE expressions.
  */
 public class CurrentValueExpression implements Expression {
     private Value currentNode;
@@ -285,7 +285,7 @@ public class CurrentValueExpression implements Expression {
 
 **Why necessary**: AST nodes are compile-time representations. At runtime, we need an `Expression` object that can be evaluated. This class is the runtime counterpart of `CurrentValueNode`.
 
-**Mutable state**: Unlike most expressions, this one has mutable state (`currentNode`). This is set before each evaluation during SELECT filtering.
+**Mutable state**: Unlike most expressions, this one has mutable state (`currentNode`). This is set before each evaluation during PATHS filtering.
 
 **cloneExpression()**: Required for `spawn` and parallel execution. Each execution context needs its own instance.
 
@@ -332,19 +332,19 @@ case INCREMENT:
 
 ---
 
-### Step 5: Modify SelectStatement AST to Use Expression
+### Step 5: Modify PathsStatement AST to Use Expression
 
-**File**: `libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java`
+**File**: `libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java`
 
 **Before:**
 ```java
-public class SelectStatement extends OLSyntaxNode {
-    private final String selectQuery;
+public class PathsStatement extends OLSyntaxNode {
+    private final String pathsQuery;
     private final VariablePathNode intoVariable;
     private final VariablePathNode fromVariable;
     private final String whereQuery;  // ← STRING
 
-    public SelectStatement(ParsingContext context, String selectQuery,
+    public PathsStatement(ParsingContext context, String pathsQuery,
         VariablePathNode intoVariable, VariablePathNode fromVariable, 
         String whereQuery) {
         // ...
@@ -358,13 +358,13 @@ public class SelectStatement extends OLSyntaxNode {
 
 **After:**
 ```java
-public class SelectStatement extends OLSyntaxNode {
-    private final String selectQuery;
+public class PathsStatement extends OLSyntaxNode {
+    private final String pathsQuery;
     private final VariablePathNode intoVariable;
     private final VariablePathNode fromVariable;
     private final OLSyntaxNode whereExpression;  // ← EXPRESSION NODE
 
-    public SelectStatement(ParsingContext context, String selectQuery,
+    public PathsStatement(ParsingContext context, String pathsQuery,
         VariablePathNode intoVariable, VariablePathNode fromVariable, 
         OLSyntaxNode whereExpression) {
         // ...
@@ -384,7 +384,7 @@ public class SelectStatement extends OLSyntaxNode {
 
 **Why OLSyntaxNode not Expression**: At the AST level, we use syntax nodes. These are converted to runtime `Expression` objects later by the OOITBuilder.
 
-**Identical change needed for**: `SelectExpressionNode.java` (expression variant of SELECT)
+**Identical change needed for**: `PathsExpressionNode.java` (expression variant of PATHS)
 
 ---
 
@@ -394,12 +394,12 @@ public class SelectStatement extends OLSyntaxNode {
 
 **Before (line 2511-2525):**
 ```java
-case SELECT:
+case PATHS:
     nextToken();
-    assertToken(Scanner.TokenType.STRING, "expected SELECT query string");
-    String selectQuery = token.content().replaceAll("\"", "");
+    assertToken(Scanner.TokenType.STRING, "expected PATHS query string");
+    String pathsQuery = token.content().replaceAll("\"", "");
     nextToken();
-    eat(Scanner.TokenType.INTO, "expected INTO after SELECT expression");
+    eat(Scanner.TokenType.INTO, "expected INTO after PATHS expression");
     VariablePathNode intoVar = parseVariablePath();
     eat(Scanner.TokenType.FROM, "expected FROM after INTO variable");
     VariablePathNode fromVar = parseVariablePath();
@@ -407,24 +407,24 @@ case SELECT:
     assertToken(Scanner.TokenType.STRING, "expected WHERE query string");  // ← STRING
     String whereQuery = token.content().replaceAll("\"", "");
     nextToken();
-    retVal = new SelectStatement(getContext(), selectQuery, intoVar, fromVar, whereQuery);
+    retVal = new PathsStatement(getContext(), pathsQuery, intoVar, fromVar, whereQuery);
     break;
 ```
 
 **After:**
 ```java
-case SELECT:
+case PATHS:
     nextToken();
-    assertToken(Scanner.TokenType.STRING, "expected SELECT query string");
-    String selectQuery = token.content().replaceAll("\"", "");
+    assertToken(Scanner.TokenType.STRING, "expected PATHS query string");
+    String pathsQuery = token.content().replaceAll("\"", "");
     nextToken();
-    eat(Scanner.TokenType.INTO, "expected INTO after SELECT expression");
+    eat(Scanner.TokenType.INTO, "expected INTO after PATHS expression");
     VariablePathNode intoVar = parseVariablePath();
     eat(Scanner.TokenType.FROM, "expected FROM after INTO variable");
     VariablePathNode fromVar = parseVariablePath();
     eat(Scanner.TokenType.WHERE, "expected WHERE after FROM variable");
     OLSyntaxNode whereExpr = parseExpression();  // ← PARSE EXPRESSION
-    retVal = new SelectStatement(getContext(), selectQuery, intoVar, fromVar, whereExpr);
+    retVal = new PathsStatement(getContext(), pathsQuery, intoVar, fromVar, whereExpr);
     break;
 ```
 
@@ -435,11 +435,11 @@ case SELECT:
 - Complex expressions: `$ > 10 && $ < 20`
 - Boolean logic: `($ == 5 || $ == 10) && $ != 7`
 
-**SELECT query remains string**: Note that `selectQuery` is still parsed as a string (`"$.*"`). We're using a hybrid approach:
-- SELECT path: ANTLR string (JSONPath-like navigation)
+**PATHS query remains string**: Note that `pathsQuery` is still parsed as a string (`"$.*"`). We're using a hybrid approach:
+- PATHS path: ANTLR string (JSONPath-like navigation)
 - WHERE condition: Native Jolie expression
 
-**Identical change needed at**: Line 3686-3698 for `SelectExpressionNode` (expression variant)
+**Identical change needed at**: Line 3686-3698 for `PathsExpressionNode` (expression variant)
 
 ---
 
@@ -456,7 +456,7 @@ This is where we encounter **massive interface overhead**.
 public interface OLVisitor<C, R> {
     // ... 272 other visit methods ...
     
-    R visit(SelectExpressionNode n, C ctx);
+    R visit(PathsExpressionNode n, C ctx);
     
     R visit(CurrentValueNode n, C ctx);  // ← NEW
 }
@@ -620,7 +620,7 @@ public void visit(CurrentValueNode n) {
 
 **Classification**: ABSOLUTELY NECESSARY
 
-**What it does**: Sets `currExpression` to a new `CurrentValueExpression` instance. This is the runtime object that will be evaluated during SELECT execution.
+**What it does**: Sets `currExpression` to a new `CurrentValueExpression` instance. This is the runtime object that will be evaluated during PATHS execution.
 
 ---
 
@@ -631,7 +631,7 @@ public void visit(CurrentValueNode n) {
 **Before (line 1220-1224):**
 ```java
 @Override
-public void visit(SelectStatement n) {
+public void visit(PathsStatement n) {
     // Queries are strings, just visit variable paths
     n.intoVariable().accept(this);
     n.fromVariable().accept(this);
@@ -641,7 +641,7 @@ public void visit(SelectStatement n) {
 **After:**
 ```java
 @Override
-public void visit(SelectStatement n) {
+public void visit(PathsStatement n) {
     // Visit variable paths and WHERE expression
     n.intoVariable().accept(this);
     n.fromVariable().accept(this);
@@ -653,7 +653,7 @@ public void visit(SelectStatement n) {
 
 **Classification**: Necessary for correctness
 
-**Identical change needed**: In `visit(SelectExpressionNode)` at line 978-981
+**Identical change needed**: In `visit(PathsExpressionNode)` at line 978-981
 
 ---
 
@@ -664,10 +664,10 @@ public void visit(SelectStatement n) {
 **Before (line 795-802):**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currNode = new SelectStatement(
+public void visit(PathsStatement n) {
+    currNode = new PathsStatement(
         n.context(),
-        n.selectQuery(),
+        n.pathsQuery(),
         optimizePath(n.intoVariable()),
         optimizePath(n.fromVariable()),
         n.whereQuery());  // ← String passed through
@@ -677,10 +677,10 @@ public void visit(SelectStatement n) {
 **After:**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currNode = new SelectStatement(
+public void visit(PathsStatement n) {
+    currNode = new PathsStatement(
         n.context(),
-        n.selectQuery(),
+        n.pathsQuery(),
         optimizePath(n.intoVariable()),
         optimizePath(n.fromVariable()),
         optimizeNode(n.whereExpression()));  // ← Expression optimized
@@ -694,7 +694,7 @@ public void visit(SelectStatement n) {
 
 **Classification**: Necessary for optimization
 
-**Identical change needed**: In `visit(SelectExpressionNode)` at line 752-757
+**Identical change needed**: In `visit(PathsExpressionNode)` at line 752-757
 
 ---
 
@@ -705,9 +705,9 @@ public void visit(SelectStatement n) {
 **Before (line 1724-1730):**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        n.selectQuery(),
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        n.pathsQuery(),
         buildVariablePath(n.intoVariable()),
         buildVariablePath(n.fromVariable()),
         n.whereQuery());  // ← String
@@ -717,9 +717,9 @@ public void visit(SelectStatement n) {
 **After:**
 ```java
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        n.selectQuery(),
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        n.pathsQuery(),
         buildVariablePath(n.intoVariable()),
         buildVariablePath(n.fromVariable()),
         buildExpression(n.whereExpression()));  // ← Expression
@@ -745,27 +745,27 @@ Expression whereExpr = CompareCondition {
 }
 ```
 
-**Identical change needed**: In `visit(SelectExpressionNode)` at line 1487-1493
+**Identical change needed**: In `visit(PathsExpressionNode)` at line 1487-1493
 
 ---
 
-### Step 12: Modify SelectProcess to Evaluate WHERE Expression
+### Step 12: Modify PathsProcess to Evaluate WHERE Expression
 
-**File**: `jolie/src/main/java/jolie/process/SelectProcess.java`
+**File**: `jolie/src/main/java/jolie/process/PathsProcess.java`
 
 This is a **major change** - the entire WHERE evaluation logic.
 
 **Before:**
 ```java
-public class SelectProcess implements Process {
-    private final String selectQuery;
+public class PathsProcess implements Process {
+    private final String pathsQuery;
     private final VariablePath intoVariable;
     private final VariablePath fromVariable;
     private final String whereQuery;  // ← STRING
 
-    public SelectProcess(String selectQuery, VariablePath intoVariable,
+    public PathsProcess(String pathsQuery, VariablePath intoVariable,
         VariablePath fromVariable, String whereQuery) {
-        this.selectQuery = selectQuery;
+        this.pathsQuery = pathsQuery;
         this.intoVariable = intoVariable;
         this.fromVariable = fromVariable;
         this.whereQuery = whereQuery;
@@ -776,9 +776,9 @@ public class SelectProcess implements Process {
         // ...
         
         // Pass string to ANTLR executor
-        List<String> matchingPaths = SelectQueryExecutor.execute(
+        List<String> matchingPaths = PathsQueryExecutor.execute(
             source,
-            selectQuery,
+            pathsQuery,
             whereQuery,  // ← ANTLR parses this string
             rootPath);
         
@@ -792,15 +792,15 @@ public class SelectProcess implements Process {
 
 **After:**
 ```java
-public class SelectProcess implements Process {
-    private final String selectQuery;
+public class PathsProcess implements Process {
+    private final String pathsQuery;
     private final VariablePath intoVariable;
     private final VariablePath fromVariable;
     private final Expression whereExpression;  // ← EXPRESSION
 
-    public SelectProcess(String selectQuery, VariablePath intoVariable,
+    public PathsProcess(String pathsQuery, VariablePath intoVariable,
         VariablePath fromVariable, Expression whereExpression) {
-        this.selectQuery = selectQuery;
+        this.pathsQuery = pathsQuery;
         this.intoVariable = intoVariable;
         this.fromVariable = fromVariable;
         this.whereExpression = whereExpression;
@@ -810,10 +810,10 @@ public class SelectProcess implements Process {
     public void run() {
         // ...
         
-        // Execute SELECT query WITHOUT WHERE (pass null)
-        List<String> candidatePaths = SelectQueryExecutor.execute(
+        // Execute PATHS query WITHOUT WHERE (pass null)
+        List<String> candidatePaths = PathsQueryExecutor.execute(
             source,
-            selectQuery,
+            pathsQuery,
             null,  // ← No ANTLR WHERE parsing
             rootPath);
 
@@ -897,7 +897,7 @@ public class SelectProcess implements Process {
 ```
 
 **Why necessary**: This is the core runtime logic change. Instead of passing WHERE to ANTLR:
-1. Get all candidates from SELECT query (no filtering)
+1. Get all candidates from PATHS query (no filtering)
 2. For each candidate, bind `$` and evaluate WHERE expression
 3. Keep only candidates where WHERE evaluates to true
 
@@ -911,7 +911,7 @@ public class SelectProcess implements Process {
    - Evaluate expression by calling `evaluate()`
    - Check boolean result
 
-**Identical change needed**: In `SelectExpression.java` (expression variant)
+**Identical change needed**: In `PathsExpression.java` (expression variant)
 
 ---
 
@@ -969,10 +969,10 @@ These changes are **required** for the feature to work:
 | OLParser.java | Parse WHERE as expression | Must build expression tree |
 | CurrentValueNode.java | New file | AST representation of `$` |
 | CurrentValueExpression.java | New file | Runtime evaluation of `$` |
-| SelectStatement.java | whereExpression field | Store expression tree |
+| PathsStatement.java | whereExpression field | Store expression tree |
 | OOITBuilder.java | visit(CurrentValueNode) | Convert AST to runtime |
 | OLParseTreeOptimizer.java | visit(CurrentValueNode) | Preserve `$` through optimization ⚠️ |
-| SelectProcess.java | Complete rewrite | Native expression evaluation |
+| PathsProcess.java | Complete rewrite | Native expression evaluation |
 | CompareCondition.java | Add accessors | Inspect expression tree |
 
 **Total: 10 critical changes across 10 files**
@@ -1115,7 +1115,7 @@ main {
     root.y = 10;
     root.z = 5;
     
-    select "$.*" into results from root where $ == 5;
+    paths "$.*" into results from root where $ == 5;
     
     i = 0;
     while (i < #results) {
@@ -1136,7 +1136,7 @@ root.x
 ### Test 2: False Condition
 
 ```jolie
-select "$.*" into results from root where 2 == 1;
+paths "$.*" into results from root where 2 == 1;
 ```
 
 **Expected**: 0 results
@@ -1150,7 +1150,7 @@ data.items[0].price = 10;
 data.items[1].price = 5;
 data.items[2].price = 10;
 
-select "$.items[*].price" into results from data where $ == 10;
+paths "$.items[*].price" into results from data where $ == 10;
 ```
 
 **Expected output:**
@@ -1165,8 +1165,8 @@ data.items[0].price
 
 ```jolie
 // These would work with further implementation:
-select "$.*" into results from root where $ > 5 && $ < 20
-select "$.*" into results from root where $ == 5 || $ == 10
+paths "$.*" into results from root where $ > 5 && $ < 20
+paths "$.*" into results from root where $ == 5 || $ == 10
 ```
 
 **Status**: Supported by architecture, untested
@@ -1195,11 +1195,11 @@ select "$.*" into results from root where $ == 5 || $ == 10
    - **Lines changed**: 8
    - **Changes**: Add import, DOLLAR case, parse WHERE as expression (2 locations)
 
-3. `libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java`
+3. `libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java`
    - **Lines changed**: 6
    - **Changes**: whereQuery String → whereExpression OLSyntaxNode
 
-4. `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectExpressionNode.java`
+4. `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathsExpressionNode.java`
    - **Lines changed**: 6
    - **Changes**: whereQuery String → whereExpression OLSyntaxNode
 
@@ -1211,11 +1211,11 @@ select "$.*" into results from root where $ == 5 || $ == 10
    - **Lines changed**: 7
    - **Changes**: visit(CurrentValueNode), build WHERE expression (2 locations)
 
-7. `jolie/src/main/java/jolie/process/SelectProcess.java`
+7. `jolie/src/main/java/jolie/process/PathsProcess.java`
    - **Lines changed**: ~100
    - **Changes**: Complete rewrite of WHERE evaluation logic
 
-8. `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+8. `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
    - **Lines changed**: ~100
    - **Changes**: Complete rewrite of WHERE evaluation logic
 
@@ -1270,7 +1270,7 @@ select "$.*" into results from root where $ == 5 || $ == 10
 
 ## Conclusion
 
-Converting SELECT's WHERE clause from ANTLR strings to native Jolie expressions required:
+Converting PATHS's WHERE clause from ANTLR strings to native Jolie expressions required:
 
 1. **New token**: DOLLAR (`$`) for current value reference
 2. **New AST node**: CurrentValueNode (compile-time)
@@ -1278,9 +1278,9 @@ Converting SELECT's WHERE clause from ANTLR strings to native Jolie expressions 
 4. **Parser changes**: Recognize `$` and parse WHERE as expression
 5. **AST changes**: Store WHERE as expression tree, not string
 6. **Visitor pattern updates**: 17 files (10 critical, 7 interface-only)
-7. **Runtime rewrite**: SelectProcess/SelectExpression filtering logic
+7. **Runtime rewrite**: PathsProcess/PathsExpression filtering logic
 8. **Critical bug fix**: OLParseTreeOptimizer preserving CurrentValueNode
 
-The implementation successfully eliminates ANTLR dependency for WHERE clauses while maintaining compatibility with the existing SELECT query syntax. The `$` operator provides a clean, familiar way to reference the current filtered value.
+The implementation successfully eliminates ANTLR dependency for WHERE clauses while maintaining compatibility with the existing PATHS query syntax. The `$` operator provides a clean, familiar way to reference the current filtered value.
 
 **Key takeaway**: 44% of file changes are pure interface overhead due to Jolie's visitor pattern architecture. The actual functional changes are concentrated in ~10 files.

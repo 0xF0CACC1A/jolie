@@ -8,7 +8,7 @@ main {
     root.y = 20;
     root.z = 10;
 
-    select "$.*" into results from root where ". == 10";
+    paths "$.*" into results from root where ". == 10";
 
     i = 0;
     while( i < #results ) {

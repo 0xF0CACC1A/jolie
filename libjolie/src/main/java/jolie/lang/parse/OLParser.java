@@ -110,7 +110,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.VariablePathNode.Type;
@@ -126,7 +126,7 @@ import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
@@ -135,7 +135,7 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
-import jolie.lang.parse.ast.expression.SelectExpressionNode;
+import jolie.lang.parse.ast.expression.PathsExpressionNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -2509,11 +2509,11 @@ public class OLParser extends AbstractParser {
 			eat(
 				Scanner.TokenType.RPAREN, "expected )" );
 			break;
-		case SELECT:
+		case PATHS:
 			nextToken();
 
-			// Native syntax: select var where ... OR select var.* where ... OR select var..field where ...
-			assertIdentifier( "expected variable name after SELECT" );
+			// Native syntax: paths var where ... OR paths var.* where ... OR paths var..field where ...
+			assertIdentifier( "expected variable name after PATHS" );
 			String varId = token.content();
 			nextToken();
 
@@ -2531,29 +2531,29 @@ public class OLParser extends AbstractParser {
 				if( token.is( Scanner.TokenType.DOT ) ) {
 					// Recursive descent: var..field
 					nextToken(); // eat second DOT
-					assertIdentifier( "expected field name after .. in SELECT" );
+					assertIdentifier( "expected field name after .. in PATHS" );
 					recursiveField = token.content();
 					nextToken(); // eat field name
 				} else {
 					// Wildcard path: count levels (.*, .*.*)
-					eat( Scanner.TokenType.ASTERISK, "expected * or . after first . in SELECT" );
+					eat( Scanner.TokenType.ASTERISK, "expected * or . after first . in PATHS" );
 					wildcardDepth++;
 
 					while( token.is( Scanner.TokenType.DOT ) ) {
 						nextToken(); // eat DOT
-						eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
+						eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS" );
 						wildcardDepth++;
 					}
 				}
 			}
 
-			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, wildcardDepth, recursiveField );
+			PathSpecNode pathSpec = new PathSpecNode( getContext(), baseVar, wildcardDepth, recursiveField );
 
-			eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
+			eat( Scanner.TokenType.WHERE, "expected WHERE after PATHS path" );
 
 			OLSyntaxNode whereExpr = parseExpression();
 
-			retVal = new SelectStatement( getContext(), selectPath, whereExpr );
+			retVal = new PathsStatement( getContext(), pathSpec, whereExpr );
 			break;
 		case SYNCHRONIZED:
 			nextToken();
@@ -3748,11 +3748,11 @@ public class OLParser extends AbstractParser {
 			case IF:
 				retVal = parseIfExpression();
 				break;
-			case SELECT:
+			case PATHS:
 				nextToken();
 
-				// Native syntax: select var where ... OR select var.* where ... OR select var..field where ...
-				assertIdentifier( "expected variable name after SELECT" );
+				// Native syntax: paths var where ... OR paths var.* where ... OR paths var..field where ...
+				assertIdentifier( "expected variable name after PATHS" );
 				String varIdExpr = token.content();
 				nextToken();
 
@@ -3770,30 +3770,30 @@ public class OLParser extends AbstractParser {
 					if( token.is( Scanner.TokenType.DOT ) ) {
 						// Recursive descent: var..field
 						nextToken(); // eat second DOT
-						assertIdentifier( "expected field name after .. in SELECT expression" );
+						assertIdentifier( "expected field name after .. in PATHS expression" );
 						recursiveFieldExpr = token.content();
 						nextToken(); // eat field name
 					} else {
 						// Wildcard path: count levels (.*, .*.*)
-						eat( Scanner.TokenType.ASTERISK, "expected * or . after first . in SELECT expression" );
+						eat( Scanner.TokenType.ASTERISK, "expected * or . after first . in PATHS expression" );
 						wildcardDepthExpr++;
 
 						while( token.is( Scanner.TokenType.DOT ) ) {
 							nextToken(); // eat DOT
-							eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
+							eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS expression" );
 							wildcardDepthExpr++;
 						}
 					}
 				}
 
-				SelectPathNode selectPathExpr =
-					new SelectPathNode( getContext(), baseVarExpr, wildcardDepthExpr, recursiveFieldExpr );
+				PathSpecNode pathSpecExpr =
+					new PathSpecNode( getContext(), baseVarExpr, wildcardDepthExpr, recursiveFieldExpr );
 
-				eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
+				eat( Scanner.TokenType.WHERE, "expected WHERE after PATHS path" );
 
 				OLSyntaxNode whereExprNode = parseExpression();
 
-				retVal = new SelectExpressionNode( getContext(), selectPathExpr, whereExprNode );
+				retVal = new PathsExpressionNode( getContext(), pathSpecExpr, whereExprNode );
 				break;
 			default:
 				break;

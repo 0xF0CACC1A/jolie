@@ -29,7 +29,7 @@ main {
     companies[2].departments[0].teams[0].projects[1].technologies[1] = "Flask";
 
     // Query: in_progress projects with Python
-    select "$[*]..projects[*]" into results from companies
+    paths "$[*]..projects[*]" into results from companies
     where ".status == in_progress && ..technologies[*] == Python";
 
     i = 0;

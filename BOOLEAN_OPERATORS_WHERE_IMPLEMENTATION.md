@@ -1,4 +1,4 @@
-# Adding Boolean Operators Support to SELECT WHERE Clauses
+# Adding Boolean Operators Support to PATHS WHERE Clauses
 
 ## Table of Contents
 1. [Overview](#overview)
@@ -15,30 +15,30 @@
 ## Overview
 
 ### Goal
-Enable full boolean operator support in SELECT WHERE clauses, allowing complex filtering expressions with `&&` (AND), `||` (OR), and `!` (NOT).
+Enable full boolean operator support in PATHS WHERE clauses, allowing complex filtering expressions with `&&` (AND), `||` (OR), and `!` (NOT).
 
 **Before (Limited Support):**
 ```jolie
 // Simple comparisons worked
-result << select tree.* where $ == 5
+result << paths tree.* where $ == 5
 
 // Boolean operators FAILED - "$ not bound" error
-result << select tree.* where $ > 5 && $ < 20  // ✗ BROKEN
+result << paths tree.* where $ > 5 && $ < 20  // ✗ BROKEN
 ```
 
 **After (Full Boolean Support):**
 ```jolie
 // Simple comparisons still work
-result << select tree.* where $ == 5
+result << paths tree.* where $ == 5
 
 // Boolean operators now work
-result << select tree.* where $ > 5 && $ < 20               // ✓ AND
-result << select tree.* where $ < 5 || $ > 20               // ✓ OR
-result << select tree.* where !($ > 10)                     // ✓ NOT
-result << select tree.* where $ > 0 && ($ < 10 || $ > 20)   // ✓ Complex
+result << paths tree.* where $ > 5 && $ < 20               // ✓ AND
+result << paths tree.* where $ < 5 || $ > 20               // ✓ OR
+result << paths tree.* where !($ > 10)                     // ✓ NOT
+result << paths tree.* where $ > 0 && ($ < 10 || $ > 20)   // ✓ Complex
 
 // Works with recursive field descent too!
-result << select tree.* where $..score > 10 && $.priority > 5  // ✓ Mixed
+result << paths tree.* where $..score > 10 && $.priority > 5  // ✓ Mixed
 ```
 
 ### Why This Was Needed
@@ -159,7 +159,7 @@ public class CurrentValueExpression implements Expression {
 
 ### The Binding Problem Visualized
 
-**Expression**: `select tree.* where $ > 5 && $ < 20`
+**Expression**: `paths tree.* where $ > 5 && $ < 20`
 
 **Expression Tree Construction** (happens once at parse time):
 ```
@@ -327,9 +327,9 @@ public class NotExpression implements Expression {
 
 This is the **core fix** - replacing shallow single-instance search with deep recursive collection.
 
-#### File 4: SelectExpression.java - Binding Logic
+#### File 4: PathsExpression.java - Binding Logic
 
-**File**: `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+**File**: `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
 
 **Before (lines 54-71):**
 ```java
@@ -390,7 +390,7 @@ for (String path : candidatePaths) {
 
 ---
 
-#### File 4 continued: SelectExpression.java - Traversal Method
+#### File 4 continued: PathsExpression.java - Traversal Method
 
 **Before (lines 81-99):**
 ```java
@@ -531,13 +531,13 @@ Final result: [CVE₁, CVE₂]  ← Both $ references collected!
 
 ---
 
-#### File 5: SelectProcess.java - Identical Changes
+#### File 5: PathsProcess.java - Identical Changes
 
-**File**: `jolie/src/main/java/jolie/process/SelectProcess.java`
+**File**: `jolie/src/main/java/jolie/process/PathsProcess.java`
 
-**Changes**: Identical to `SelectExpression.java` - both need the fix because:
-- `SelectExpression` is used with `<<` operator: `result << select tree.* where $ > 5`
-- `SelectProcess` is used as statement: `select tree.* where $ > 5` (though less common)
+**Changes**: Identical to `PathsExpression.java` - both need the fix because:
+- `PathsExpression` is used with `<<` operator: `result << paths tree.* where $ > 5`
+- `PathsProcess` is used as statement: `paths tree.* where $ > 5` (though less common)
 
 **Modified lines 59-80** (binding loop):
 ```java
@@ -772,7 +772,7 @@ We created **5 new tests** to verify boolean operator support:
 
 ### Test 1: AND Operator - Range Filtering
 
-**File**: `test/select/test_recursive_and.ol`
+**File**: `test/paths/test_recursive_and.ol`
 
 ```jolie
 include "console.iol"
@@ -783,7 +783,7 @@ main {
     tree.c.nested.value = 25;
     tree.d.value = 8;
 
-    res << select tree..value where $ > 5 && $ < 20;
+    res << paths tree..value where $ > 5 && $ < 20;
 
     i = 0;
     while( i < #res.results ) {
@@ -819,7 +819,7 @@ tree.b.data.value
 
 ### Test 2: OR Operator - Multiple Alternatives
 
-**File**: `test/select/test_recursive_or.ol`
+**File**: `test/paths/test_recursive_or.ol`
 
 ```jolie
 include "console.iol"
@@ -830,7 +830,7 @@ main {
     tree.c.nested.value = 25;
     tree.d.value = 8;
 
-    res << select tree..value where $ < 5 || $ > 20;
+    res << paths tree..value where $ < 5 || $ > 20;
 
     i = 0;
     while( i < #res.results ) {
@@ -866,7 +866,7 @@ tree.a.value
 
 ### Test 3: NOT Operator - Negation
 
-**File**: `test/select/test_recursive_not.ol`
+**File**: `test/paths/test_recursive_not.ol`
 
 ```jolie
 include "console.iol"
@@ -876,7 +876,7 @@ main {
     tree.b.data.score = 15;
     tree.c.other = 20;
 
-    res << select tree.* where !($..score > 10);
+    res << paths tree.* where !($..score > 10);
 
     i = 0;
     while( i < #res.results ) {
@@ -887,7 +887,7 @@ main {
 ```
 
 **Test logic**:
-- Select all direct children of `tree` (wildcard: `tree.*`)
+- Paths all direct children of `tree` (wildcard: `tree.*`)
 - Filter for nodes where descendant `score` field is NOT greater than 10
 - Uses NOT operator with recursive field search
 
@@ -913,7 +913,7 @@ tree.c
 
 ### Test 4: Mixed Field Access - Recursive + Direct
 
-**File**: `test/select/test_recursive_where_and_field.ol`
+**File**: `test/paths/test_recursive_where_and_field.ol`
 
 ```jolie
 include "console.iol"
@@ -926,7 +926,7 @@ main {
     tree.c.status = "inactive";
     tree.c.priority = 9;
 
-    res << select tree.* where $..status == "active" && $.priority > 5;
+    res << paths tree.* where $..status == "active" && $.priority > 5;
 
     i = 0;
     while( i < #res.results ) {
@@ -937,7 +937,7 @@ main {
 ```
 
 **Test logic**:
-- Select all direct children of `tree`
+- Paths all direct children of `tree`
 - Filter for nodes that have:
   - A descendant `status` field equal to "active" (`$..status`)
   - AND a direct child `priority` field greater than 5 (`$.priority`)
@@ -977,7 +977,7 @@ tree.b
 
 ### Test 5: Complex Nested Expression
 
-**File**: `test/select/test_recursive_complex.ol`
+**File**: `test/paths/test_recursive_complex.ol`
 
 ```jolie
 include "console.iol"
@@ -989,7 +989,7 @@ main {
     tree.d.deep.value = 25;
     tree.e.value = 2;
 
-    res << select tree..value where $ > 0 && ($ < 10 || $ > 20);
+    res << paths tree..value where $ > 0 && ($ < 10 || $ > 20);
 
     i = 0;
     while( i < #res.results ) {
@@ -1064,7 +1064,7 @@ All three CVE instances get collected and bound.
 
 ### Test Results Summary
 
-**Test runner**: `test/select/run_native_tests.py`
+**Test runner**: `test/paths/run_native_tests.py`
 
 Updated to include new tests:
 
@@ -1171,8 +1171,8 @@ public final Expression expression;
 
 ---
 
-#### 4. SelectExpression.java
-**File**: `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+#### 4. PathsExpression.java
+**File**: `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
 
 **Lines changed**: ~50
 **Line numbers**: 55-119
@@ -1207,28 +1207,28 @@ public final Expression expression;
    - Added recursive traversal for `AndCondition`, `OrCondition`, `NotExpression`
    - Changed from "find first" to "collect all" semantics
 
-**Why necessary**: This is the core WHERE evaluation logic for SELECT expressions (with `<<` operator).
+**Why necessary**: This is the core WHERE evaluation logic for PATHS expressions (with `<<` operator).
 
 **Classification**: ABSOLUTELY CRITICAL
 
 ---
 
-#### 5. SelectProcess.java
-**File**: `jolie/src/main/java/jolie/process/SelectProcess.java`
+#### 5. PathsProcess.java
+**File**: `jolie/src/main/java/jolie/process/PathsProcess.java`
 
 **Lines changed**: ~50
 **Line numbers**: 63-121
 
-**Changes**: Identical to `SelectExpression.java`:
+**Changes**: Identical to `PathsExpression.java`:
 1. Lines 63-64: Change to list collection
 2. Lines 72-74: Bind all instances loop
 3. Lines 85-121: Replace traversal method
 
-**Why necessary**: This is the WHERE evaluation logic for SELECT statements (without `<<`).
+**Why necessary**: This is the WHERE evaluation logic for PATHS statements (without `<<`).
 
 **Classification**: ABSOLUTELY CRITICAL
 
-**Note**: The duplication between SelectExpression and SelectProcess is architectural - Jolie separates expressions (produce values) from processes (cause effects).
+**Note**: The duplication between PathsExpression and PathsProcess is architectural - Jolie separates expressions (produce values) from processes (cause effects).
 
 ---
 
@@ -1259,7 +1259,7 @@ public final Expression expression;
 ### Test Runner Modified (1)
 
 #### 11. run_native_tests.py
-**File**: `test/select/run_native_tests.py`
+**File**: `test/paths/run_native_tests.py`
 
 **Lines changed**: 5
 **Lines**: 23-27
@@ -1282,7 +1282,7 @@ public final Expression expression;
 ### Total Impact
 
 - **Source files modified**: 5
-  - **Critical runtime files**: 2 (SelectExpression.java, SelectProcess.java)
+  - **Critical runtime files**: 2 (PathsExpression.java, PathsProcess.java)
   - **Critical operator files**: 3 (AndCondition.java, OrCondition.java, NotExpression.java)
 - **Test files created**: 5
 - **Test files modified**: 1
@@ -1520,7 +1520,7 @@ Trying to implement everything at once - too many moving parts, impossible to de
 
 **Our phases**:
 - **Phase 1**: Native WHERE with `$` (replaced ANTLR)
-- **Phase 2**: Native SELECT paths with `var.*` (replaced ANTLR)
+- **Phase 2**: Native PATHS paths with `var.*` (replaced ANTLR)
 - **Phase 3**: Recursive field descent `..field` (JSONPath-like)
 - **Phase 4**: Boolean operators (current work)
 - **Phase 5** (future): Complete ANTLR removal
@@ -1531,7 +1531,7 @@ Each phase is usable on its own, even if following phases don't happen.
 
 ## Conclusion
 
-Adding boolean operator support to SELECT WHERE clauses required:
+Adding boolean operator support to PATHS WHERE clauses required:
 
 1. **Field visibility changes**: Made `children`/`expression` fields public in 3 operator classes
 2. **Traversal algorithm rewrite**: Replaced shallow single-instance search with deep recursive collection
@@ -1550,14 +1550,14 @@ Adding boolean operator support to SELECT WHERE clauses required:
 
 ```jolie
 // All of these now work:
-result << select tree.* where $ > 5 && $ < 20
-result << select tree.* where $ == "active" || $ == "pending"
-result << select tree.* where !($..hidden == true)
-result << select tree.* where $..score > 50 && $.verified == true
-result << select tree.* where ($ < 10 || $ > 90) && $ != 50
+result << paths tree.* where $ > 5 && $ < 20
+result << paths tree.* where $ == "active" || $ == "pending"
+result << paths tree.* where !($..hidden == true)
+result << paths tree.* where $..score > 50 && $.verified == true
+result << paths tree.* where ($ < 10 || $ > 90) && $ != 50
 ```
 
 **Next steps**: The boolean operator infrastructure is complete. Future work will focus on:
 - Performance optimization (short-circuit evaluation already works)
 - More complex WHERE features (e.g., `has`, `in`, regex matching)
-- Complete ANTLR removal from SELECT path traversal
+- Complete ANTLR removal from PATHS path traversal

@@ -15,7 +15,7 @@ main {
     data[3].a.id = 4;
     data[3].a.b.x = 10;
 
-    select "$[*].a" into results from data where ".b.c == 5";
+    paths "$[*].a" into results from data where ".b.c == 5";
 
     i = 0;
     while( i < #results ) {

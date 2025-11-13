@@ -1,9 +1,9 @@
-# Converting SELECT Path from ANTLR Strings to Native Jolie Syntax
+# Converting PATHS Path from ANTLR Strings to Native Jolie Syntax
 
 ## Table of Contents
 1. [Overview](#overview)
 2. [Architecture Before vs After](#architecture-before-vs-after)
-3. [The var.* Syntax: Native Path Selection](#the-var-syntax-native-path-selection)
+3. [The var.* Syntax: Native Path Specification](#the-var-syntax-native-path-selection)
 4. [Implementation Steps](#implementation-steps)
 5. [Critical vs Interface-Only Changes](#critical-vs-interface-only-changes)
 6. [Parser Token Consumption Strategy](#parser-token-consumption-strategy)
@@ -16,23 +16,23 @@
 ## Overview
 
 ### Goal
-Convert the SELECT primitive's path selection from ANTLR-parsed strings to native Jolie syntax.
+Convert the PATHS primitive's path specification from ANTLR-parsed strings to native Jolie syntax.
 
 **Before:**
 ```jolie
-result << select "$.*" from var where $ == 5
+result << paths "$.*" from var where $ == 5
                  ↑ ANTLR string for path
 ```
 
 **After:**
 ```jolie
-result << select var.* from var where $ == 5
+result << paths var.* from var where $ == 5
                  ↑ Native Jolie path syntax
 ```
 
 ### Why This Change?
 
-1. **Consistency**: SELECT paths use native Jolie path syntax (`var.*`) like the rest of the language
+1. **Consistency**: PATHS paths use native Jolie path syntax (`var.*`) like the rest of the language
 2. **Type Safety**: Compile-time checking for variable existence
 3. **Performance**: No ANTLR parsing overhead for the path component
 4. **Simplification**: Eventually allows complete removal of ANTLR dependency
@@ -40,37 +40,37 @@ result << select var.* from var where $ == 5
 
 ### Key Challenge
 
-The SELECT path needs to support wildcard patterns (`*`) that don't exist in standard Jolie variable paths, which are typically concrete like `root.field.subfield`.
+The PATHS path needs to support wildcard patterns (`*`) that don't exist in standard Jolie variable paths, which are typically concrete like `root.field.subfield`.
 
 ---
 
 ## Architecture Before vs After
 
-### Before: ANTLR String-Based SELECT Path
+### Before: ANTLR String-Based PATHS Path
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select "$.*" from var where $ == 5              │
+│ Jolie Code: paths "$.*" from var where $ == 5              │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser (OLParser.java)                                       │
-│   - SELECT path: string → stored as String                   │
+│   - PATHS path: string → stored as String                   │
 │   - FROM variable: parseVariablePath() → VariablePathNode    │
 │   - WHERE clause: parseExpression() → OLSyntaxNode          │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ AST: SelectStatement                                         │
-│   String selectQuery = "$.*"           ← STRING              │
+│ AST: PathsStatement                                         │
+│   String pathsQuery = "$.*"           ← STRING              │
 │   VariablePathNode fromVariable = var                        │
 │   OLSyntaxNode whereExpression = ...                        │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Runtime: SelectProcess                                       │
-│   - Pass selectQuery string to ANTLR parser                  │
-│   - SelectQueryExecutor parses "$.*" at runtime              │
+│ Runtime: PathsProcess                                       │
+│   - Pass pathsQuery string to ANTLR parser                  │
+│   - PathsQueryExecutor parses "$.*" at runtime              │
 │   - ANTLR generates JSONPath-like navigation                 │
 └─────────────────────────────────────────────────────────────┘
 ```
@@ -79,29 +79,29 @@ The SELECT path needs to support wildcard patterns (`*`) that don't exist in sta
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│ Jolie Code: select var.* from var where $ == 5              │
+│ Jolie Code: paths var.* from var where $ == 5              │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Scanner (Scanner.java)                                       │
-│   - Tokenizes: SELECT, ID(var), DOT, ASTERISK, FROM, ...    │
+│   - Tokenizes: PATHS, ID(var), DOT, ASTERISK, FROM, ...    │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ Parser (OLParser.java)                                       │
-│   - SELECT path: Manual token consumption                    │
+│   - PATHS path: Manual token consumption                    │
 │     ├─ Eat ID token → "var"                                  │
 │     ├─ Create VariablePathNode(var)                          │
 │     ├─ Eat DOT token                                         │
 │     ├─ Eat ASTERISK token                                    │
-│     └─ Create SelectPathNode(var, wildcard=true)             │
+│     └─ Create PathSpecNode(var, wildcard=true)             │
 │   - FROM variable: parseVariablePath() → (ignored)           │
 │   - WHERE clause: parseExpression() → OLSyntaxNode          │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ AST: SelectStatement                                         │
-│   SelectPathNode selectPath                    ← NEW NODE    │
+│ AST: PathsStatement                                         │
+│   PathSpecNode pathSpec                    ← NEW NODE    │
 │     ├─ VariablePathNode baseVariable = var                   │
 │     └─ boolean isWildcard = true                             │
 │   OLSyntaxNode whereExpression = ...                        │
@@ -109,36 +109,36 @@ The SELECT path needs to support wildcard patterns (`*`) that don't exist in sta
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ AST Optimization (OLParseTreeOptimizer.java)                 │
-│   - Traverses SelectPathNode                                 │
+│   - Traverses PathSpecNode                                 │
 │   - Optimizes baseVariable path                              │
 │   - Preserves wildcard flag                                  │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
 │ AST-to-Runtime Conversion (OOITBuilder.java)                 │
-│   - Converts SelectPathNode to runtime VariablePath          │
+│   - Converts PathSpecNode to runtime VariablePath          │
 │   - Extracts baseVariable and isWildcard flag                │
 └─────────────────────────────────────────────────────────────┘
                           ↓
 ┌─────────────────────────────────────────────────────────────┐
-│ Runtime: SelectProcess                                       │
-│   VariablePath selectPath (e.g., "var")                      │
+│ Runtime: PathsProcess                                       │
+│   VariablePath pathSpec (e.g., "var")                      │
 │   boolean isWildcard (true)                                  │
 │                                                              │
 │   Execution:                                                 │
 │     1. Convert wildcard to ANTLR string: "$.*"               │
-│     2. Pass to SelectQueryExecutor (temporary)               │
+│     2. Pass to PathsQueryExecutor (temporary)               │
 │     3. Filter results with WHERE expression                  │
 └─────────────────────────────────────────────────────────────┘
 ```
 
 ---
 
-## The var.* Syntax: Native Path Selection
+## The var.* Syntax: Native Path Specification
 
 ### Why var.* is Needed
 
-In SELECT queries, you often want to select "all direct children" of a node:
+In PATHS queries, you often want to paths "all direct children" of a node:
 
 ```jolie
 // Find all values equal to 5
@@ -146,12 +146,12 @@ tree.a = 5;
 tree.b = 6;
 tree.c = 5;
 
-result << select tree.* from tree where $ == 5
+result << paths tree.* from tree where $ == 5
                      ↑
                 All children of tree
 ```
 
-Without `*`, you'd need to enumerate: `select tree.a, tree.b, tree.c` (not practical for dynamic data).
+Without `*`, you'd need to enumerate: `paths tree.a, tree.b, tree.c` (not practical for dynamic data).
 
 ### Design Constraints
 
@@ -164,11 +164,11 @@ Without `*`, you'd need to enumerate: `select tree.a, tree.b, tree.c` (not pract
 Create a new AST node that combines a base variable path with a wildcard flag:
 
 ```java
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;  // The "var" part
     private final boolean isWildcard;              // The ".*" part
 
-    public SelectPathNode(ParsingContext context,
+    public PathSpecNode(ParsingContext context,
                          VariablePathNode baseVariable,
                          boolean isWildcard) {
         super(context);
@@ -182,9 +182,9 @@ public class SelectPathNode extends OLSyntaxNode {
 
 ## Implementation Steps
 
-### Step 1: Create SelectPathNode AST Node
+### Step 1: Create PathSpecNode AST Node
 
-**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java` (NEW)
+**File**: `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java` (NEW)
 
 ```java
 package jolie.lang.parse.ast.expression;
@@ -195,14 +195,14 @@ import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.context.ParsingContext;
 
 /**
- * Represents a native SELECT path (e.g., var.* for wildcard selection).
- * This replaces the ANTLR string-based path selection.
+ * Represents a native PATHS path (e.g., var.* for wildcard selection).
+ * This replaces the ANTLR string-based path specification.
  */
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
     private final VariablePathNode baseVariable;
     private final boolean isWildcard;
 
-    public SelectPathNode(ParsingContext context,
+    public PathSpecNode(ParsingContext context,
                          VariablePathNode baseVariable,
                          boolean isWildcard) {
         super(context);
@@ -227,7 +227,7 @@ public class SelectPathNode extends OLSyntaxNode {
 
 **Why necessary**: Every syntactic construct needs an AST node. This represents the native `var.*` path.
 
-**Package location**: In `ast.expression` because SELECT paths can appear in expression contexts (with `<<` operator).
+**Package location**: In `ast.expression` because PATHS paths can appear in expression contexts (with `<<` operator).
 
 **Key design**:
 - `baseVariable`: The variable being selected from (e.g., `tree`, `data.items`)
@@ -235,67 +235,67 @@ public class SelectPathNode extends OLSyntaxNode {
 
 ---
 
-### Step 2: Update SelectStatement and SelectExpressionNode AST Classes
+### Step 2: Update PathsStatement and PathsExpressionNode AST Classes
 
-**File**: `libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java`
+**File**: `libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java`
 
 **Before:**
 ```java
-public class SelectStatement extends OLSyntaxNode {
-    private final String selectQuery;           // ← ANTLR string
+public class PathsStatement extends OLSyntaxNode {
+    private final String pathsQuery;           // ← ANTLR string
     private final VariablePathNode intoVariable;
     private final VariablePathNode fromVariable;
     private final OLSyntaxNode whereExpression;
 
-    public SelectStatement(ParsingContext context,
-                          String selectQuery,
+    public PathsStatement(ParsingContext context,
+                          String pathsQuery,
                           VariablePathNode intoVariable,
                           VariablePathNode fromVariable,
                           OLSyntaxNode whereExpression) {
         super(context);
-        this.selectQuery = selectQuery;
+        this.pathsQuery = pathsQuery;
         this.intoVariable = intoVariable;
         this.fromVariable = fromVariable;
         this.whereExpression = whereExpression;
     }
 
-    public String selectQuery() { return selectQuery; }
+    public String pathsQuery() { return pathsQuery; }
     public VariablePathNode fromVariable() { return fromVariable; }
 }
 ```
 
 **After:**
 ```java
-public class SelectStatement extends OLSyntaxNode {
-    private final SelectPathNode selectPath;    // ← Native path node
+public class PathsStatement extends OLSyntaxNode {
+    private final PathSpecNode pathSpec;    // ← Native path node
     private final OLSyntaxNode whereExpression;
 
-    public SelectStatement(ParsingContext context,
-                          SelectPathNode selectPath,
+    public PathsStatement(ParsingContext context,
+                          PathSpecNode pathSpec,
                           OLSyntaxNode whereExpression) {
         super(context);
-        this.selectPath = selectPath;
+        this.pathSpec = pathSpec;
         this.whereExpression = whereExpression;
     }
 
-    public SelectPathNode selectPath() { return selectPath; }
+    public PathSpecNode pathSpec() { return pathSpec; }
     public OLSyntaxNode whereExpression() { return whereExpression; }
 }
 ```
 
 **Changes**:
-1. **Removed `String selectQuery`**: No longer using ANTLR string
-2. **Removed `VariablePathNode fromVariable`**: The FROM variable is now part of SelectPathNode
+1. **Removed `String pathsQuery`**: No longer using ANTLR string
+2. **Removed `VariablePathNode fromVariable`**: The FROM variable is now part of PathSpecNode
 3. **Removed `VariablePathNode intoVariable`**: INTO clause was already removed in previous refactoring (using `<<` operator now)
-4. **Added `SelectPathNode selectPath`**: New native path representation
+4. **Added `PathSpecNode pathSpec`**: New native path representation
 
-**Why necessary**: The AST must store the SELECT path as a structured node, not a string.
+**Why necessary**: The AST must store the PATHS path as a structured node, not a string.
 
-**Identical change needed for**: `SelectExpressionNode.java` (expression variant of SELECT)
+**Identical change needed for**: `PathsExpressionNode.java` (expression variant of PATHS)
 
 ---
 
-### Step 3: Update Parser to Parse Native SELECT Syntax
+### Step 3: Update Parser to Parse Native PATHS Syntax
 
 **File**: `libjolie/src/main/java/jolie/lang/parse/OLParser.java`
 
@@ -303,39 +303,39 @@ This is the most critical change - teaching the parser to recognize `var.*` synt
 
 **Change 3.1**: Add import (line 131)
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 ```
 
-**Change 3.2**: Update SELECT statement parsing (line 2512-2563)
+**Change 3.2**: Update PATHS statement parsing (line 2512-2563)
 
 **Before:**
 ```java
-case SELECT:
+case PATHS:
     nextToken();
-    assertToken(Scanner.TokenType.STRING, "expected SELECT query string");
-    String selectQuery = token.content().replaceAll("\"", "");
+    assertToken(Scanner.TokenType.STRING, "expected PATHS query string");
+    String pathsQuery = token.content().replaceAll("\"", "");
     nextToken();
-    eat(Scanner.TokenType.INTO, "expected INTO after SELECT expression");
+    eat(Scanner.TokenType.INTO, "expected INTO after PATHS expression");
     VariablePathNode intoVar = parseVariablePath();
     eat(Scanner.TokenType.FROM, "expected FROM after INTO variable");
     VariablePathNode fromVar = parseVariablePath();
     eat(Scanner.TokenType.WHERE, "expected WHERE after FROM variable");
     OLSyntaxNode whereExpr = parseExpression();
-    retVal = new SelectStatement(getContext(), selectQuery, intoVar, fromVar, whereExpr);
+    retVal = new PathsStatement(getContext(), pathsQuery, intoVar, fromVar, whereExpr);
     break;
 ```
 
 **After:**
 ```java
-case SELECT:
+case PATHS:
     nextToken();
 
-    SelectPathNode selectPath;
+    PathSpecNode pathSpec;
     VariablePathNode fromVar;
 
     // Check if old ANTLR string syntax or new native syntax
     if (token.is(Scanner.TokenType.STRING)) {
-        // Old syntax: select "$.*" into results from var where ...
+        // Old syntax: paths "$.*" into results from var where ...
         // For backward compatibility
         nextToken(); // eat the string
 
@@ -346,14 +346,14 @@ case SELECT:
             nextToken(); // eat the into variable (ignored with << operator)
         }
 
-        eat(Scanner.TokenType.FROM, "expected FROM after SELECT query");
+        eat(Scanner.TokenType.FROM, "expected FROM after PATHS query");
         fromVar = parseVariablePath();
 
-        // Create SelectPathNode with wildcard (assume "$.*" for now)
-        selectPath = new SelectPathNode(getContext(), fromVar, true);
+        // Create PathSpecNode with wildcard (assume "$.*" for now)
+        pathSpec = new PathSpecNode(getContext(), fromVar, true);
     } else {
-        // New native syntax: select var.* from var where ...
-        assertIdentifier("expected variable name after SELECT");
+        // New native syntax: paths var.* from var where ...
+        assertIdentifier("expected variable name after PATHS");
         String varId = token.content();
         nextToken();
 
@@ -367,14 +367,14 @@ case SELECT:
             null));
 
         // Check for DOT
-        eat(Scanner.TokenType.DOT, "expected . after variable in SELECT");
+        eat(Scanner.TokenType.DOT, "expected . after variable in PATHS");
 
         // Check for ASTERISK (*)
-        eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+        eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
 
-        selectPath = new SelectPathNode(getContext(), baseVar, true);
+        pathSpec = new PathSpecNode(getContext(), baseVar, true);
 
-        eat(Scanner.TokenType.FROM, "expected FROM after SELECT path");
+        eat(Scanner.TokenType.FROM, "expected FROM after PATHS path");
 
         parseVariablePath(); // Parse but ignore - FROM is now useless
     }
@@ -383,7 +383,7 @@ case SELECT:
 
     OLSyntaxNode whereExpr = parseExpression();
 
-    retVal = new SelectStatement(getContext(), selectPath, whereExpr);
+    retVal = new PathsStatement(getContext(), pathSpec, whereExpr);
     break;
 ```
 
@@ -396,11 +396,11 @@ case SELECT:
 
 **Key insight**: The trick is to **eat tokens manually** instead of calling parsing helper methods. This gives us fine-grained control over what gets consumed.
 
-**Identical change needed at**: Line 3727-3770 for `SelectExpressionNode` (expression variant)
+**Identical change needed at**: Line 3727-3770 for `PathsExpressionNode` (expression variant)
 
 ---
 
-### Step 4: Add SelectPathNode to Visitor Interfaces
+### Step 4: Add PathSpecNode to Visitor Interfaces
 
 This is where we encounter **interface overhead** again (similar to CurrentValueNode).
 
@@ -413,7 +413,7 @@ This is where we encounter **interface overhead** again (similar to CurrentValue
 public interface OLVisitor<C, R> {
     // ... other visit methods ...
 
-    R visit(SelectPathNode n, C ctx);  // ← NEW
+    R visit(PathSpecNode n, C ctx);  // ← NEW
 }
 ```
 
@@ -428,10 +428,10 @@ public interface OLVisitor<C, R> {
 public interface UnitOLVisitor extends OLVisitor<Unit, Unit> {
     // ... other methods ...
 
-    void visit(SelectPathNode n);
+    void visit(PathSpecNode n);
 
     @Override
-    default Unit visit(SelectPathNode n, Unit ctx) {
+    default Unit visit(PathSpecNode n, Unit ctx) {
         visit(n);
         return Unit.INSTANCE;
     }
@@ -440,7 +440,7 @@ public interface UnitOLVisitor extends OLVisitor<Unit, Unit> {
 
 ---
 
-### Step 5: Implement visit(SelectPathNode) in ALL Visitor Classes
+### Step 5: Implement visit(PathSpecNode) in ALL Visitor Classes
 
 We must add this method to **10 different classes**:
 
@@ -449,19 +449,19 @@ We must add this method to **10 different classes**:
 **File**: `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~118
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~118
 
 @Override
-public void visit(SelectPathNode n) {
+public void visit(PathSpecNode n) {
     // Visit the base variable to check it exists
     n.baseVariable().accept(this);
 }  // Line ~1070
 
-// Also update visit(SelectStatement) and visit(SelectExpressionNode):
+// Also update visit(PathsStatement) and visit(PathsExpressionNode):
 @Override
-public void visit(SelectStatement n) {
-    // Visit SELECT path and WHERE expression
-    n.selectPath().accept(this);
+public void visit(PathsStatement n) {
+    // Visit PATHS path and WHERE expression
+    n.pathSpec().accept(this);
     n.whereExpression().accept(this);
 }
 ```
@@ -475,18 +475,18 @@ public void visit(SelectStatement n) {
 **File**: `libjolie/src/main/java/jolie/lang/parse/TypeChecker.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~102
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~102
 
 @Override
-public void visit(SelectPathNode n) {
+public void visit(PathSpecNode n) {
     // Visit the base variable for type checking
     n.baseVariable().accept(this);
 }  // Line ~760
 
-// Also update visit(SelectExpressionNode):
+// Also update visit(PathsExpressionNode):
 @Override
-public void visit(SelectExpressionNode n) {
-    n.selectPath().accept(this);
+public void visit(PathsExpressionNode n) {
+    n.pathSpec().accept(this);
 }
 ```
 
@@ -499,19 +499,19 @@ public void visit(SelectExpressionNode n) {
 **File**: `libjolie/src/main/java/jolie/lang/parse/module/SymbolReferenceResolver.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~116
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~116
 
 @Override
-public void visit(SelectPathNode n) {}  // Line ~340
+public void visit(PathSpecNode n) {}  // Line ~340
 
-// Also update visit(SelectExpressionNode):
+// Also update visit(PathsExpressionNode):
 @Override
-public void visit(SelectExpressionNode n) {
-    n.selectPath().accept(this);
+public void visit(PathsExpressionNode n) {
+    n.pathSpec().accept(this);
 }
 ```
 
-**Why empty**: SelectPathNode doesn't reference module symbols.
+**Why empty**: PathSpecNode doesn't reference module symbols.
 
 **Classification**: Interface satisfaction only
 
@@ -520,19 +520,19 @@ public void visit(SelectExpressionNode n) {
 **File**: `libjolie/src/main/java/jolie/lang/parse/module/SymbolTableGenerator.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~95
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~95
 
 @Override
-public void visit(SelectPathNode n) {}  // Line ~197
+public void visit(PathSpecNode n) {}  // Line ~197
 
-// Also update visit(SelectExpressionNode):
+// Also update visit(PathsExpressionNode):
 @Override
-public void visit(SelectExpressionNode n) {
-    n.selectPath().accept(this);
+public void visit(PathsExpressionNode n) {
+    n.pathSpec().accept(this);
 }
 ```
 
-**Why empty**: SelectPathNode doesn't add symbols to the symbol table.
+**Why empty**: PathSpecNode doesn't add symbols to the symbol table.
 
 **Classification**: Interface satisfaction only
 
@@ -541,19 +541,19 @@ public void visit(SelectExpressionNode n) {
 **File**: `libjolie/src/main/java/jolie/lang/parse/util/impl/ProgramInspectorCreatorVisitor.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~99
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~99
 
 @Override
-public void visit(SelectPathNode n) {}  // Line ~301
+public void visit(PathSpecNode n) {}  // Line ~301
 
-// Also update visit(SelectExpressionNode):
+// Also update visit(PathsExpressionNode):
 @Override
-public void visit(SelectExpressionNode n) {
-    n.selectPath().accept(this);
+public void visit(PathsExpressionNode n) {
+    n.pathSpec().accept(this);
 }
 ```
 
-**Why empty**: Program inspection doesn't need special handling for SelectPathNode.
+**Why empty**: Program inspection doesn't need special handling for PathSpecNode.
 
 **Classification**: Interface satisfaction only
 
@@ -562,13 +562,13 @@ public void visit(SelectExpressionNode n) {
 **File**: `tools/jolie2plasma/src/main/java/joliex/plasma/impl/InterfaceVisitor.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~93
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~93
 
 @Override
-public void visit(SelectPathNode n) {}  // Line ~198
+public void visit(PathSpecNode n) {}  // Line ~198
 ```
 
-**Why empty**: SelectPathNode doesn't appear in interface definitions.
+**Why empty**: PathSpecNode doesn't appear in interface definitions.
 
 **Classification**: Interface satisfaction only
 
@@ -577,127 +577,127 @@ public void visit(SelectPathNode n) {}  // Line ~198
 **File**: `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~101
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~101
 
 @Override
-public void visit(SelectPathNode n) {
+public void visit(PathSpecNode n) {
     // Optimize the base variable path, preserve wildcard flag
-    currNode = new SelectPathNode(
+    currNode = new PathSpecNode(
         n.context(),
         optimizePath(n.baseVariable()),
         n.isWildcard());
 }  // Line ~658-662
 
-// Also update visit(SelectStatement) and visit(SelectExpressionNode):
+// Also update visit(PathsStatement) and visit(PathsExpressionNode):
 @Override
-public void visit(SelectStatement n) {
-    currNode = new SelectStatement(
+public void visit(PathsStatement n) {
+    currNode = new PathsStatement(
         n.context(),
-        (SelectPathNode) optimizeNode(n.selectPath()),
+        (PathSpecNode) optimizeNode(n.pathSpec()),
         optimizeNode(n.whereExpression()));
 }
 ```
 
-**Why**: Must preserve SelectPathNode through optimization, applying optimizations to the base variable.
+**Why**: Must preserve PathSpecNode through optimization, applying optimizations to the base variable.
 
 **Classification**: ABSOLUTELY CRITICAL
 
-**What happens if empty**: The SelectPathNode is lost, causing SELECT to break.
+**What happens if empty**: The PathSpecNode is lost, causing PATHS to break.
 
 #### 5.8 OOITBuilder (CRITICAL - Converts AST to Runtime!)
 
 **File**: `jolie/src/main/java/jolie/OOITBuilder.java`
 
 ```java
-import jolie.lang.parse.ast.expression.SelectPathNode;  // Line ~132
+import jolie.lang.parse.ast.expression.PathSpecNode;  // Line ~132
 
 @Override
-public void visit(SelectPathNode n) {
-    // SelectPathNode is handled inline in SelectStatement/SelectExpressionNode visitors
-    // No runtime representation needed for SelectPathNode itself
+public void visit(PathSpecNode n) {
+    // PathSpecNode is handled inline in PathsStatement/PathsExpressionNode visitors
+    // No runtime representation needed for PathSpecNode itself
 }  // Line ~1501-1504
 
-// Update visit(SelectStatement):
+// Update visit(PathsStatement):
 @Override
-public void visit(SelectStatement n) {
-    currProcess = new SelectProcess(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().isWildcard(),
+public void visit(PathsStatement n) {
+    currProcess = new PathsProcess(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().isWildcard(),
         buildExpression(n.whereExpression()));
 }  // Line ~1729-1734
 
-// Update visit(SelectExpressionNode):
+// Update visit(PathsExpressionNode):
 @Override
-public void visit(SelectExpressionNode n) {
-    currExpression = new SelectExpression(
-        buildVariablePath(n.selectPath().baseVariable()),
-        n.selectPath().isWildcard(),
+public void visit(PathsExpressionNode n) {
+    currExpression = new PathsExpression(
+        buildVariablePath(n.pathSpec().baseVariable()),
+        n.pathSpec().isWildcard(),
         buildExpression(n.whereExpression()));
 }  // Line ~1493-1497
 ```
 
-**Why**: Converts AST SelectPathNode to runtime VariablePath and boolean flag.
+**Why**: Converts AST PathSpecNode to runtime VariablePath and boolean flag.
 
 **Classification**: ABSOLUTELY CRITICAL
 
-**What it does**: Extracts `baseVariable()` and `isWildcard()` from SelectPathNode and passes them to runtime classes.
+**What it does**: Extracts `baseVariable()` and `isWildcard()` from PathSpecNode and passes them to runtime classes.
 
 ---
 
 ### Step 6: Update Runtime Classes to Accept Native Paths
 
-**File**: `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+**File**: `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
 
 **Before:**
 ```java
-public class SelectExpression implements Expression {
-    private final String selectQuery;           // ← ANTLR string
+public class PathsExpression implements Expression {
+    private final String pathsQuery;           // ← ANTLR string
     private final VariablePath fromVariable;
     private final Expression whereExpression;
 
-    public SelectExpression(String selectQuery,
+    public PathsExpression(String pathsQuery,
                            VariablePath fromVariable,
                            Expression whereExpression) {
-        this.selectQuery = selectQuery;
+        this.pathsQuery = pathsQuery;
         this.fromVariable = fromVariable;
         this.whereExpression = whereExpression;
     }
 
     @Override
     public Value evaluate() {
-        // ... use selectQuery and fromVariable separately
+        // ... use pathsQuery and fromVariable separately
     }
 }
 ```
 
 **After:**
 ```java
-public class SelectExpression implements Expression {
-    private final VariablePath selectPath;      // ← Native variable path
+public class PathsExpression implements Expression {
+    private final VariablePath pathSpec;      // ← Native variable path
     private final boolean isWildcard;           // ← Wildcard flag
     private final Expression whereExpression;
 
-    public SelectExpression(VariablePath selectPath,
+    public PathsExpression(VariablePath pathSpec,
                            boolean isWildcard,
                            Expression whereExpression) {
-        this.selectPath = selectPath;
+        this.pathSpec = pathSpec;
         this.isWildcard = isWildcard;
         this.whereExpression = whereExpression;
     }
 
     @Override
     public Value evaluate() {
-        String rootPath = extractRootPath(selectPath);
-        ValueVector vec = selectPath.getValueVector();
+        String rootPath = extractRootPath(pathSpec);
+        ValueVector vec = pathSpec.getValueVector();
         Object source = vec.size() > 1 ? vec : vec.first();
 
         // Convert native path to ANTLR query string (temporary)
-        String selectQuery = isWildcard ? "$.*" : "$";
+        String pathsQuery = isWildcard ? "$.*" : "$";
 
-        // Execute SELECT query without WHERE filtering
-        List<String> candidatePaths = SelectQueryExecutor.execute(
+        // Execute PATHS query without WHERE filtering
+        List<String> candidatePaths = PathsQueryExecutor.execute(
             source,
-            selectQuery,
+            pathsQuery,
             null,
             rootPath);
 
@@ -707,8 +707,8 @@ public class SelectExpression implements Expression {
 
     @Override
     public Expression cloneExpression(TransformationReason reason) {
-        return new SelectExpression(
-            (VariablePath) selectPath.cloneExpression(reason),
+        return new PathsExpression(
+            (VariablePath) pathSpec.cloneExpression(reason),
             isWildcard,
             whereExpression.cloneExpression(reason));
     }
@@ -716,31 +716,31 @@ public class SelectExpression implements Expression {
 ```
 
 **Changes**:
-1. **Removed `String selectQuery`**: No longer receive ANTLR string from AST
-2. **Removed `VariablePath fromVariable`**: Merged into `selectPath`
-3. **Added `VariablePath selectPath`**: The base variable being selected from
+1. **Removed `String pathsQuery`**: No longer receive ANTLR string from AST
+2. **Removed `VariablePath fromVariable`**: Merged into `pathSpec`
+3. **Added `VariablePath pathSpec`**: The base variable being selected from
 4. **Added `boolean isWildcard`**: Whether `.*` was specified
 5. **Runtime conversion**: Convert `isWildcard` to ANTLR string `"$.*"` temporarily
 
-**Why this is transitional**: We still call `SelectQueryExecutor.execute()` with ANTLR strings. The full native implementation would replace this with Jolie-based path traversal. For now, we convert at runtime: `var.* → "$.*"`.
+**Why this is transitional**: We still call `PathsQueryExecutor.execute()` with ANTLR strings. The full native implementation would replace this with Jolie-based path traversal. For now, we convert at runtime: `var.* → "$.*"`.
 
-**Identical change needed**: In `SelectProcess.java` (statement variant)
+**Identical change needed**: In `PathsProcess.java` (statement variant)
 
 ---
 
 ### Step 7: Handle FROM Clause Transition
 
-The FROM clause is now redundant because the variable is specified in the SELECT path itself:
+The FROM clause is now redundant because the variable is specified in the PATHS path itself:
 
 **Old syntax:**
 ```jolie
-select "$.*" from tree where $ == 5
+paths "$.*" from tree where $ == 5
        ↑ path    ↑ variable
 ```
 
 **New syntax:**
 ```jolie
-select tree.* from tree where $ == 5
+paths tree.* from tree where $ == 5
        ↑ variable+path  ↑ redundant!
 ```
 
@@ -748,13 +748,13 @@ select tree.* from tree where $ == 5
 
 **Parser code**:
 ```java
-eat(Scanner.TokenType.FROM, "expected FROM after SELECT path");
+eat(Scanner.TokenType.FROM, "expected FROM after PATHS path");
 parseVariablePath(); // Parse but ignore - FROM is now useless
 ```
 
 **Future step**: Remove FROM keyword entirely:
 ```jolie
-select tree.* where $ == 5
+paths tree.* where $ == 5
        ↑ variable+path  (no FROM needed)
 ```
 
@@ -768,16 +768,16 @@ These changes are **required** for the feature to work:
 
 | File | Change | Why |
 |------|--------|-----|
-| SelectPathNode.java | New file | AST representation of `var.*` |
+| PathSpecNode.java | New file | AST representation of `var.*` |
 | OLParser.java | Manual token consumption | Parse `var.*` syntax |
 | OLParser.java | Backward compatibility | Support old string syntax |
-| SelectStatement.java | selectPath field | Store native path |
-| SelectExpressionNode.java | selectPath field | Store native path |
-| OLParseTreeOptimizer.java | visit(SelectPathNode) | Preserve through optimization ⚠️ |
-| OOITBuilder.java | visit(SelectPathNode) | Convert AST to runtime |
+| PathsStatement.java | pathSpec field | Store native path |
+| PathsExpressionNode.java | pathSpec field | Store native path |
+| OLParseTreeOptimizer.java | visit(PathSpecNode) | Preserve through optimization ⚠️ |
+| OOITBuilder.java | visit(PathSpecNode) | Convert AST to runtime |
 | OOITBuilder.java | Extract baseVariable/wildcard | Pass to runtime classes |
-| SelectProcess.java | Accept native path | Runtime execution |
-| SelectExpression.java | Accept native path | Runtime execution |
+| PathsProcess.java | Accept native path | Runtime execution |
+| PathsExpression.java | Accept native path | Runtime execution |
 
 **Total: 10 critical changes across 8 files (2 new)**
 
@@ -788,10 +788,10 @@ These changes are **necessary** but contain minimal logic:
 | File | Change | Why |
 |------|--------|-----|
 | SemanticVerifier.java | Visit baseVariable | Verify variable exists |
-| SemanticVerifier.java | Update SelectStatement visitor | Traverse selectPath |
+| SemanticVerifier.java | Update PathsStatement visitor | Traverse pathSpec |
 | TypeChecker.java | Visit baseVariable | Check types |
-| TypeChecker.java | Update SelectExpressionNode visitor | Traverse selectPath |
-| OLParseTreeOptimizer.java | Update SelectStatement visitor | Optimize selectPath |
+| TypeChecker.java | Update PathsExpressionNode visitor | Traverse pathSpec |
+| OLParseTreeOptimizer.java | Update PathsStatement visitor | Optimize pathSpec |
 
 **Total: 5 correctness changes across 3 files**
 
@@ -801,8 +801,8 @@ These changes are **required by the visitor pattern** but contain no logic:
 
 | File | Change | Why Interface Required |
 |------|--------|------------------------|
-| OLVisitor.java | visit(SelectPathNode) signature | All nodes need visitor method |
-| UnitOLVisitor.java | visit(SelectPathNode) default | Adapter for void visitors |
+| OLVisitor.java | visit(PathSpecNode) signature | All nodes need visitor method |
+| UnitOLVisitor.java | visit(PathSpecNode) default | Adapter for void visitors |
 | SymbolReferenceResolver.java | Empty visit() | Implements UnitOLVisitor |
 | SymbolTableGenerator.java | Empty visit() | Implements UnitOLVisitor |
 | ProgramInspectorCreatorVisitor.java | Empty visit() | Implements UnitOLVisitor |
@@ -852,8 +852,8 @@ If we called `parseVariablePath()` for `tree.*`, it would:
 We **manually consume tokens** instead of using helper methods:
 
 ```java
-// Parse SELECT path (e.g., var.*)
-assertIdentifier("expected variable name after SELECT");
+// Parse PATHS path (e.g., var.*)
+assertIdentifier("expected variable name after PATHS");
 String varId = token.content();
 nextToken();  // ← Eat ID token
 
@@ -864,13 +864,13 @@ baseVar.append(new Pair<>(
     null));
 
 // Eat DOT token
-eat(Scanner.TokenType.DOT, "expected . after variable in SELECT");
+eat(Scanner.TokenType.DOT, "expected . after variable in PATHS");
 
 // Eat ASTERISK token
-eat(Scanner.TokenType.ASTERISK, "expected * after . in SELECT");
+eat(Scanner.TokenType.ASTERISK, "expected * after . in PATHS");
 
 // Now we have: ID, DOT, ASTERISK consumed
-SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, true);
+PathSpecNode pathSpec = new PathSpecNode(getContext(), baseVar, true);
 ```
 
 **Key insight**: The `eat()` method consumes a specific token type and provides a clear error message if not found. This gives us fine-grained control.
@@ -885,15 +885,15 @@ SelectPathNode selectPath = new SelectPathNode(getContext(), baseVar, true);
 ### Token Sequence
 
 ```
-Input: select tree.* from tree where $ == 5
+Input: paths tree.* from tree where $ == 5
 
-Tokens: SELECT ID(tree) DOT ASTERISK FROM ID(tree) WHERE DOLLAR EQUAL INT(5)
+Tokens: PATHS ID(tree) DOT ASTERISK FROM ID(tree) WHERE DOLLAR EQUAL INT(5)
         ↑      ↑         ↑   ↑
         |      |         |   |
         |      |         |   Eat ASTERISK
         |      |         Eat DOT
         |      Eat ID
-        Eat SELECT
+        Eat PATHS
 ```
 
 ---
@@ -906,22 +906,22 @@ The parser now supports **both syntaxes**:
 
 **Old syntax (ANTLR string):**
 ```jolie
-result << select "$.*" from tree where $ == 10
+result << paths "$.*" from tree where $ == 10
 ```
 
 **New syntax (native path):**
 ```jolie
-result << select tree.* from tree where $ == 10
+result << paths tree.* from tree where $ == 10
 ```
 
 ### Detection Strategy
 
 ```java
 if (token.is(Scanner.TokenType.STRING)) {
-    // Old syntax: string starts the SELECT clause
+    // Old syntax: string starts the PATHS clause
     // Parse as ANTLR string
 } else {
-    // New syntax: identifier starts the SELECT clause
+    // New syntax: identifier starts the PATHS clause
     // Parse as native path
 }
 ```
@@ -932,28 +932,28 @@ When old syntax is detected:
 1. Eat the STRING token
 2. Check for optional INTO clause (also deprecated)
 3. Parse FROM variable
-4. Create SelectPathNode using FROM variable (ignores string content for now)
+4. Create PathSpecNode using FROM variable (ignores string content for now)
 5. Assume wildcard (most strings are `"$.*"`)
 
 ### Transition Path
 
 **Phase 1 (Current)**: Both syntaxes supported, FROM required
 ```jolie
-select tree.* from tree where $ == 5  // new
-select "$.*" from tree where $ == 5   // old (still works)
+paths tree.* from tree where $ == 5  // new
+paths "$.*" from tree where $ == 5   // old (still works)
 ```
 
 **Phase 2 (Future)**: Native syntax only, FROM optional
 ```jolie
-select tree.* from tree where $ == 5  // from is redundant
-select tree.* where $ == 5            // from removed
+paths tree.* from tree where $ == 5  // from is redundant
+paths tree.* where $ == 5            // from removed
 ```
 
 **Phase 3 (Future)**: ANTLR completely removed, extended syntax
 ```jolie
-select tree.* where $ == 5            // wildcard
-select tree.[*] where $ > 10          // array wildcard
-select tree..value where $ < 100      // recursive descent
+paths tree.* where $ == 5            // wildcard
+paths tree.[*] where $ > 10          // array wildcard
+paths tree..value where $ < 100      // recursive descent
 ```
 
 ---
@@ -962,13 +962,13 @@ select tree..value where $ < 100      // recursive descent
 
 ### Test Suite: run_native_tests.py
 
-Created a dedicated test suite for native SELECT syntax:
+Created a dedicated test suite for native PATHS syntax:
 
-**File**: `test/select/run_native_tests.py`
+**File**: `test/paths/run_native_tests.py`
 
 ```python
 #!/usr/bin/env python3
-# Builds project and runs native SELECT syntax tests
+# Builds project and runs native PATHS syntax tests
 
 tests = [
     ("test_native_wildcard.ol", ["tree.c", "tree.a"]),
@@ -981,7 +981,7 @@ tests = [
 
 ### Test 1: Basic Wildcard Selection
 
-**File**: `test/select/test_native_wildcard.ol`
+**File**: `test/paths/test_native_wildcard.ol`
 
 ```jolie
 include "console.iol"
@@ -991,7 +991,7 @@ main {
     tree.b = 6;
     tree.c = 5;
 
-    res << select tree.* from tree where $ == 5;
+    res << paths tree.* from tree where $ == 5;
 
     i = 0;
     while (i < #res.results) {
@@ -1009,11 +1009,11 @@ tree.a
 
 **Result**: ✅ PASS
 
-**Notes**: Order is reversed due to stack-based traversal in SelectQueryExecutor.
+**Notes**: Order is reversed due to stack-based traversal in PathsQueryExecutor.
 
 ### Test 2: Different Values
 
-**File**: `test/select/test_native_simple_value.ol`
+**File**: `test/paths/test_native_simple_value.ol`
 
 ```jolie
 main {
@@ -1021,7 +1021,7 @@ main {
     data.y = 200;
     data.z = 100;
 
-    res << select data.* from data where $ == 100;
+    res << paths data.* from data where $ == 100;
 }
 ```
 
@@ -1035,7 +1035,7 @@ data.x
 
 ### Test 3: Greater Than Comparison
 
-**File**: `test/select/test_native_greater_than.ol`
+**File**: `test/paths/test_native_greater_than.ol`
 
 ```jolie
 main {
@@ -1043,7 +1043,7 @@ main {
     items.b = 15;
     items.c = 20;
 
-    res << select items.* from items where $ > 10;
+    res << paths items.* from items where $ > 10;
 }
 ```
 
@@ -1057,7 +1057,7 @@ items.b
 
 ### Test 4: String Comparison
 
-**File**: `test/select/test_native_string_match.ol`
+**File**: `test/paths/test_native_string_match.ol`
 
 ```jolie
 main {
@@ -1065,7 +1065,7 @@ main {
     fruits.b = "banana";
     fruits.c = "apple";
 
-    res << select fruits.* from fruits where $ == "apple";
+    res << paths fruits.* from fruits where $ == "apple";
 }
 ```
 
@@ -1079,7 +1079,7 @@ fruits.a
 
 ### Test 5: Not Equal
 
-**File**: `test/select/test_native_not_equal.ol`
+**File**: `test/paths/test_native_not_equal.ol`
 
 ```jolie
 main {
@@ -1087,7 +1087,7 @@ main {
     vals.b = 2;
     vals.c = 3;
 
-    res << select vals.* from vals where $ != 2;
+    res << paths vals.* from vals where $ != 2;
 }
 ```
 
@@ -1103,7 +1103,7 @@ vals.a
 
 ```
 ============================================================
-Native SELECT Syntax Tests
+Native PATHS Syntax Tests
 ============================================================
 
 ✓ test_native_wildcard.ol
@@ -1123,7 +1123,7 @@ Verified that old ANTLR string syntax still works:
 
 ```jolie
 // Old syntax with native WHERE clause
-res << select "$.*" from root where $ == 10;
+res << paths "$.*" from root where $ == 10;
 ```
 
 **Result**: ✅ PASS (outputs `root.z`, `root.x` as expected)
@@ -1134,131 +1134,131 @@ res << select "$.*" from root where $ == 10;
 
 ### Files Created (1)
 
-1. `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectPathNode.java`
+1. `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathSpecNode.java`
    - **Lines**: 37
-   - **Purpose**: AST node for native SELECT paths (e.g., `var.*`)
+   - **Purpose**: AST node for native PATHS paths (e.g., `var.*`)
 
 ### Files Modified - Critical (9)
 
 1. `libjolie/src/main/java/jolie/lang/parse/OLParser.java`
    - **Lines changed**: ~60
    - **Changes**:
-     - Add SelectPathNode import
+     - Add PathSpecNode import
      - Dual syntax detection (STRING vs ID)
      - Manual token consumption for `var.*`
      - Backward compatibility handling
      - Two locations (statement + expression)
 
-2. `libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java`
+2. `libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java`
    - **Lines changed**: 12
    - **Changes**:
-     - Replace `String selectQuery` with `SelectPathNode selectPath`
+     - Replace `String pathsQuery` with `PathSpecNode pathSpec`
      - Remove `intoVariable` and `fromVariable` fields
      - Update constructor and accessors
 
-3. `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectExpressionNode.java`
+3. `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathsExpressionNode.java`
    - **Lines changed**: 12
    - **Changes**:
-     - Replace `String selectQuery` with `SelectPathNode selectPath`
+     - Replace `String pathsQuery` with `PathSpecNode pathSpec`
      - Remove `fromVariable` field
      - Update constructor and accessors
 
 4. `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
    - **Lines changed**: 10
    - **Changes**:
-     - Add SelectPathNode import
-     - visit(SelectPathNode) with optimization
-     - Update visit(SelectStatement) to optimize selectPath
-     - Update visit(SelectExpressionNode) to optimize selectPath
+     - Add PathSpecNode import
+     - visit(PathSpecNode) with optimization
+     - Update visit(PathsStatement) to optimize pathSpec
+     - Update visit(PathsExpressionNode) to optimize pathSpec
 
 5. `jolie/src/main/java/jolie/OOITBuilder.java`
    - **Lines changed**: 10
    - **Changes**:
-     - Add SelectPathNode import
-     - visit(SelectPathNode) placeholder
-     - Update visit(SelectStatement) to extract baseVariable + wildcard
-     - Update visit(SelectExpressionNode) to extract baseVariable + wildcard
+     - Add PathSpecNode import
+     - visit(PathSpecNode) placeholder
+     - Update visit(PathsStatement) to extract baseVariable + wildcard
+     - Update visit(PathsExpressionNode) to extract baseVariable + wildcard
 
-6. `jolie/src/main/java/jolie/process/SelectProcess.java`
+6. `jolie/src/main/java/jolie/process/PathsProcess.java`
    - **Lines changed**: 20
    - **Changes**:
-     - Replace `String selectQuery` + `VariablePath fromVariable`
-       with `VariablePath selectPath` + `boolean isWildcard`
+     - Replace `String pathsQuery` + `VariablePath fromVariable`
+       with `VariablePath pathSpec` + `boolean isWildcard`
      - Convert wildcard to ANTLR string at runtime (temporary)
      - Update constructor, copy(), run()
 
-7. `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+7. `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
    - **Lines changed**: 20
    - **Changes**:
-     - Replace `String selectQuery` + `VariablePath fromVariable`
-       with `VariablePath selectPath` + `boolean isWildcard`
+     - Replace `String pathsQuery` + `VariablePath fromVariable`
+       with `VariablePath pathSpec` + `boolean isWildcard`
      - Convert wildcard to ANTLR string at runtime (temporary)
      - Update constructor, cloneExpression(), evaluate()
 
 8. `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
    - **Lines changed**: 8
    - **Changes**:
-     - Add SelectPathNode import
-     - visit(SelectPathNode) to verify baseVariable
-     - Update visit(SelectStatement) to traverse selectPath
-     - Update visit(SelectExpressionNode) to traverse selectPath
+     - Add PathSpecNode import
+     - visit(PathSpecNode) to verify baseVariable
+     - Update visit(PathsStatement) to traverse pathSpec
+     - Update visit(PathsExpressionNode) to traverse pathSpec
 
 9. `libjolie/src/main/java/jolie/lang/parse/TypeChecker.java`
    - **Lines changed**: 6
    - **Changes**:
-     - Add SelectPathNode import
-     - visit(SelectPathNode) to check baseVariable types
-     - Update visit(SelectExpressionNode) to traverse selectPath
+     - Add PathSpecNode import
+     - visit(PathSpecNode) to check baseVariable types
+     - Update visit(PathsExpressionNode) to traverse pathSpec
 
 ### Files Modified - Interface Only (6)
 
 10. `libjolie/src/main/java/jolie/lang/parse/OLVisitor.java`
     - **Lines changed**: 2
-    - **Changes**: Add visit(SelectPathNode) signature
+    - **Changes**: Add visit(PathSpecNode) signature
 
 11. `libjolie/src/main/java/jolie/lang/parse/UnitOLVisitor.java`
     - **Lines changed**: 6
-    - **Changes**: Add visit(SelectPathNode) declaration and default
+    - **Changes**: Add visit(PathSpecNode) declaration and default
 
 12. `libjolie/src/main/java/jolie/lang/parse/module/SymbolReferenceResolver.java`
     - **Lines changed**: 3
-    - **Changes**: Add import, empty visit(SelectPathNode), update visit(SelectExpressionNode)
+    - **Changes**: Add import, empty visit(PathSpecNode), update visit(PathsExpressionNode)
 
 13. `libjolie/src/main/java/jolie/lang/parse/module/SymbolTableGenerator.java`
     - **Lines changed**: 3
-    - **Changes**: Add import, empty visit(SelectPathNode), update visit(SelectExpressionNode)
+    - **Changes**: Add import, empty visit(PathSpecNode), update visit(PathsExpressionNode)
 
 14. `libjolie/src/main/java/jolie/lang/parse/util/impl/ProgramInspectorCreatorVisitor.java`
     - **Lines changed**: 3
-    - **Changes**: Add import, empty visit(SelectPathNode), update visit(SelectExpressionNode)
+    - **Changes**: Add import, empty visit(PathSpecNode), update visit(PathsExpressionNode)
 
 15. `tools/jolie2plasma/src/main/java/joliex/plasma/impl/InterfaceVisitor.java`
     - **Lines changed**: 2
-    - **Changes**: Add import, empty visit(SelectPathNode)
+    - **Changes**: Add import, empty visit(PathSpecNode)
 
 ### Test Files Created (6)
 
-16. `test/select/run_native_tests.py`
+16. `test/paths/run_native_tests.py`
     - **Lines**: 77
-    - **Purpose**: Test runner for native SELECT syntax
+    - **Purpose**: Test runner for native PATHS syntax
 
-17. `test/select/test_native_wildcard.ol`
+17. `test/paths/test_native_wildcard.ol`
     - **Lines**: 18
     - **Purpose**: Basic wildcard test
 
-18. `test/select/test_native_simple_value.ol`
+18. `test/paths/test_native_simple_value.ol`
     - **Lines**: 18
     - **Purpose**: Different value test
 
-19. `test/select/test_native_greater_than.ol`
+19. `test/paths/test_native_greater_than.ol`
     - **Lines**: 18
     - **Purpose**: Comparison operator test
 
-20. `test/select/test_native_string_match.ol`
+20. `test/paths/test_native_string_match.ol`
     - **Lines**: 18
     - **Purpose**: String comparison test
 
-21. `test/select/test_native_not_equal.ol`
+21. `test/paths/test_native_not_equal.ol`
     - **Lines**: 18
     - **Purpose**: Not equal operator test
 
@@ -1278,7 +1278,7 @@ res << select "$.*" from root where $ == 10;
 ### Phase 1: Remove ANTLR Dependency (Current Goal)
 
 - ✅ Native WHERE clause with `$` operator
-- ✅ Native SELECT path with `var.*` syntax
+- ✅ Native PATHS path with `var.*` syntax
 - ⏳ Remove FROM clause (make it optional/remove)
 - ⏳ Replace ANTLR path traversal with native Jolie implementation
 - ⏳ Remove ANTLR runtime dependency completely
@@ -1289,29 +1289,29 @@ Add support for more complex patterns:
 
 **Array wildcards:**
 ```jolie
-select items.[*] where $ > 10      // All array elements
-select items.[0:5] where $ < 100   // Array slice
+paths items.[*] where $ > 10      // All array elements
+paths items.[0:5] where $ < 100   // Array slice
 ```
 
 **Nested paths:**
 ```jolie
-select data.users.*.name where $ == "Alice"  // Nested wildcard
+paths data.users.*.name where $ == "Alice"  // Nested wildcard
 ```
 
 **Recursive descent:**
 ```jolie
-select tree..value where $ > 50    // Find all "value" fields recursively
+paths tree..value where $ > 50    // Find all "value" fields recursively
 ```
 
 **Conditional selection:**
 ```jolie
-select items.*[@.price < 100] where $ has .discount  // XPath-like predicates
+paths items.*[@.price < 100] where $ has .discount  // XPath-like predicates
 ```
 
 ### Phase 3: Query Optimization
 
 Once fully native:
-- Compile-time optimization of SELECT paths
+- Compile-time optimization of PATHS paths
 - Index-based lookups for common patterns
 - Parallel evaluation of WHERE clauses
 - Caching of frequently-used queries
@@ -1320,13 +1320,13 @@ Once fully native:
 
 ## Conclusion
 
-Converting SELECT's path specification from ANTLR strings to native Jolie syntax required:
+Converting PATHS's path specification from ANTLR strings to native Jolie syntax required:
 
-1. **New AST node**: SelectPathNode to represent `var.*` syntax
+1. **New AST node**: PathSpecNode to represent `var.*` syntax
 2. **Parser changes**: Manual token consumption to parse `ID DOT ASTERISK`
-3. **AST updates**: Replace string fields with SelectPathNode in SelectStatement/SelectExpressionNode
+3. **AST updates**: Replace string fields with PathSpecNode in PathsStatement/PathsExpressionNode
 4. **Visitor pattern updates**: 15 files (9 functional, 6 interface-only)
-5. **Runtime updates**: SelectProcess/SelectExpression accept native paths
+5. **Runtime updates**: PathsProcess/PathsExpression accept native paths
 6. **Backward compatibility**: Old ANTLR string syntax still supported
 7. **Testing**: 5 tests covering various comparison operators
 
@@ -1334,6 +1334,6 @@ Converting SELECT's path specification from ANTLR strings to native Jolie syntax
 
 **Token consumption strategy**: The critical technique was **manually eating tokens** with `eat()` instead of using greedy parser helper methods like `parseVariablePath()`. This gave us fine-grained control over exactly which tokens to consume.
 
-**Current status**: Native SELECT paths work correctly with the `var.*` syntax. The implementation is backward compatible and provides a foundation for removing ANTLR dependency entirely.
+**Current status**: Native PATHS paths work correctly with the `var.*` syntax. The implementation is backward compatible and provides a foundation for removing ANTLR dependency entirely.
 
-**Next step**: Remove the FROM clause requirement and implement native path traversal to completely eliminate ANTLR from SELECT execution.
+**Next step**: Remove the FROM clause requirement and implement native path traversal to completely eliminate ANTLR from PATHS execution.

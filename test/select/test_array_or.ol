@@ -9,7 +9,7 @@ main {
     items[2].status = "inactive";
     items[3].status = "completed";
 
-    select "$[*]" into results from items where ".status == active || .status == completed";
+    paths "$[*]" into results from items where ".status == active || .status == completed";
 
     i = 0;
     while( i < #results ) {

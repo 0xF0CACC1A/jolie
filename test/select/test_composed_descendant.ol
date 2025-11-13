@@ -13,7 +13,7 @@ main {
     companies[0].departments[1].teams[0].projects[0].status = "active";
     companies[0].departments[1].teams[0].projects[0].name = "Project C";
 
-    select "$[*]..projects[*].status" into results from companies where ". == active";
+    paths "$[*]..projects[*].status" into results from companies where ". == active";
 
     i = 0;
     while( i < #results ) {

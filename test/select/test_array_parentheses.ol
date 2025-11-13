@@ -20,7 +20,7 @@ main {
     items[3].status = "active";
     items[3].verified = "false";
 
-    select "$[*]" into results from items where "(.type == premium || .status == active) && .verified == true";
+    paths "$[*]" into results from items where "(.type == premium || .status == active) && .verified == true";
 
     i = 0;
     while( i < #results ) {

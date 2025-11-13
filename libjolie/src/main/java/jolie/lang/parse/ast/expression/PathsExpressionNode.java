@@ -4,19 +4,19 @@ import jolie.lang.parse.OLVisitor;
 import jolie.lang.parse.ast.OLSyntaxNode;
 import jolie.lang.parse.context.ParsingContext;
 
-public class SelectExpressionNode extends OLSyntaxNode {
-	private final SelectPathNode selectPath;
+public class PathsExpressionNode extends OLSyntaxNode {
+	private final PathSpecNode pathSpec;
 	private final OLSyntaxNode whereExpression;
 
-	public SelectExpressionNode( ParsingContext context, SelectPathNode selectPath,
+	public PathsExpressionNode( ParsingContext context, PathSpecNode pathSpec,
 		OLSyntaxNode whereExpression ) {
 		super( context );
-		this.selectPath = selectPath;
+		this.pathSpec = pathSpec;
 		this.whereExpression = whereExpression;
 	}
 
-	public SelectPathNode selectPath() {
-		return selectPath;
+	public PathSpecNode pathSpec() {
+		return pathSpec;
 	}
 
 	public OLSyntaxNode whereExpression() {

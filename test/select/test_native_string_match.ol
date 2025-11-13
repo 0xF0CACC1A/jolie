@@ -1,4 +1,4 @@
-// Test: Native SELECT with string comparison
+// Test: Native PATHS with string comparison
 // Expected output: fruits.c, fruits.a
 
 include "console.iol"
@@ -8,7 +8,7 @@ main {
     fruits.b = "banana";
     fruits.c = "apple";
 
-    res << select fruits.* where $ == "apple";
+    res << paths fruits.* where $ == "apple";
 
     i = 0;
     while( i < #res.results ) {

@@ -7,7 +7,7 @@ main {
     data[0].a.b = 6;
     data[1].a.b = 5;
 
-    select "$[*].a" into results from data where ".b == 5";
+    paths "$[*].a" into results from data where ".b == 5";
 
     i = 0;
     while( i < #results ) {

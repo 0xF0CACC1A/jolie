@@ -1,15 +1,15 @@
-# Adding the SELECT Primitive to Jolie
+# Adding the PATHS Primitive to Jolie
 
-This document details the implementation of the SELECT primitive statement in Jolie. For general guidance on adding primitives, see [ADD_PRIMITIVE.md](ADD_PRIMITIVE.md).
+This document details the implementation of the PATHS primitive statement in Jolie. For general guidance on adding primitives, see [ADD_PRIMITIVE.md](ADD_PRIMITIVE.md).
 
 ## Overview
 
-SELECT enables JSONPath-like queries on Jolie value trees with WHERE clause filtering. SELECT uses ANTLR4 for runtime query parsing, requiring string-based AST fields instead of expression nodes.
+PATHS enables JSONPath-like queries on Jolie value trees with WHERE clause filtering. PATHS uses ANTLR4 for runtime query parsing, requiring string-based AST fields instead of expression nodes.
 
 ### Syntax
 
 ```jolie
-SELECT <query-string> INTO <variable> FROM <variable> WHERE <condition-string>
+PATHS <query-string> INTO <variable> FROM <variable> WHERE <condition-string>
 ```
 
 Results are stored as an array: `results[0]`, `results[1]`, etc.
@@ -17,7 +17,7 @@ Results are stored as an array: `results[0]`, `results[1]`, etc.
 ## Architecture Differences
 
 **Key distinction from expression-based primitives**:
-- SELECT and WHERE clauses are stored as **strings** in the AST, not expression nodes
+- PATHS and WHERE clauses are stored as **strings** in the AST, not expression nodes
 - Strings are parsed at **runtime** using ANTLR-generated parsers
 - Requires ANTLR4 Maven dependencies and grammar file
 
@@ -25,21 +25,21 @@ Results are stored as an array: `results[0]`, `results[1]`, etc.
 
 ### New Files Created
 
-1. **`libjolie/src/main/antlr4/jolie/lang/parse/select/SelectQuery.g4`**
-   - ANTLR grammar defining SELECT and WHERE query syntax
+1. **`libjolie/src/main/antlr4/jolie/lang/parse/paths/SelectQuery.g4`**
+   - ANTLR grammar defining PATHS and WHERE query syntax
    - Automatically generates lexer/parser classes during Maven build
 
-2. **`libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java`**
-   - AST node with 4 fields: `String selectQuery`, `VariablePathNode intoVariable`, `VariablePathNode fromVariable`, `String whereQuery`
+2. **`libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java`**
+   - AST node with 4 fields: `String pathsQuery`, `VariablePathNode intoVariable`, `VariablePathNode fromVariable`, `String whereQuery`
    - **Critical**: Query fields are `String`, not `OLSyntaxNode`
 
-3. **`jolie/src/main/java/jolie/process/SelectProcess.java`**
+3. **`jolie/src/main/java/jolie/process/PathsProcess.java`**
    - Runtime process with 4 fields matching AST (queries as `String`, variables as `VariablePath`)
-   - Calls `SelectQueryExecutor.execute()` for query processing
+   - Calls `PathsQueryExecutor.execute()` for query processing
    - Stores results using `intoVariable.getValueVector().get(i).setValue()`
    - Contains `extractRootPath()` helper to build full variable path string
 
-4. **`jolie/src/main/java/jolie/runtime/select/SelectQueryExecutor.java`**
+4. **`jolie/src/main/java/jolie/runtime/paths/PathsQueryExecutor.java`**
    - Static executor using ANTLR-generated parsers
    - Stack-based iterative tree traversal
    - Nested `WhereEvaluator` class for boolean expression evaluation
@@ -57,42 +57,42 @@ Results are stored as an array: `results[0]`, `results[1]`, etc.
 #### Lexer/Parser Layer
 
 **`libjolie/src/main/java/jolie/lang/parse/Scanner.java`**
-- Added 3 token types: `SELECT`, `INTO`, `WHERE`
+- Added 3 token types: `PATHS`, `INTO`, `WHERE`
 - Registered keyword mappings in `UNRESERVED_KEYWORDS`
 
 **`libjolie/src/main/java/jolie/lang/Keywords.java`**
-- Added 3 constants: `SELECT`, `INTO`, `WHERE`
+- Added 3 constants: `PATHS`, `INTO`, `WHERE`
 - Added to `MAIN_KEYWORDS` list
 
 **`libjolie/src/main/java/jolie/lang/parse/OLParser.java`**
-- Added import for `SelectStatement`
+- Added import for `PathsStatement`
 - Added parsing case in `parseBasicStatement()`:
   - Uses `assertToken(STRING)` to enforce string literals for queries
   - Extracts string content with `.replaceAll("\"", "")`
-  - Uses `eat()` to enforce keyword sequence: SELECT → INTO → FROM → WHERE
+  - Uses `eat()` to enforce keyword sequence: PATHS → INTO → FROM → WHERE
   - Calls `parseVariablePath()` for INTO/FROM variables
-  - Creates `SelectStatement` with strings (not expression nodes)
+  - Creates `PathsStatement` with strings (not expression nodes)
 
 #### Visitor Pattern
 
 **`libjolie/src/main/java/jolie/lang/parse/OLVisitor.java`**
-- Added import for `SelectStatement`
-- Added method signature: `R visit( SelectStatement n, C ctx )`
+- Added import for `PathsStatement`
+- Added method signature: `R visit( PathsStatement n, C ctx )`
 
 **`libjolie/src/main/java/jolie/lang/parse/UnitOLVisitor.java`**
-- Added import for `SelectStatement`
-- Added default implementation delegating to single-parameter `visit(SelectStatement)`
+- Added import for `PathsStatement`
+- Added default implementation delegating to single-parameter `visit(PathsStatement)`
 
 #### AST to Runtime Conversion
 
 **`jolie/src/main/java/jolie/OOITBuilder.java`**
-- Added imports for `SelectStatement` and `SelectProcess`
+- Added imports for `PathsStatement` and `PathsProcess`
 - Added visitor implementation:
   ```java
   @Override
-  public void visit( SelectStatement n ) {
-      currProcess = new SelectProcess(
-          n.selectQuery(),                    // String, not buildExpression()!
+  public void visit( PathsStatement n ) {
+      currProcess = new PathsProcess(
+          n.pathsQuery(),                    // String, not buildExpression()!
           buildVariablePath( n.intoVariable() ),
           buildVariablePath( n.fromVariable() ),
           n.whereQuery() );                   // String, not buildExpression()!
@@ -103,11 +103,11 @@ Results are stored as an array: `results[0]`, `results[1]`, etc.
 #### Semantic Analysis
 
 **`libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`**
-- Added import for `SelectStatement`
+- Added import for `PathsStatement`
 - Visits only variable paths (not query strings):
   ```java
   @Override
-  public void visit( SelectStatement n ) {
+  public void visit( PathsStatement n ) {
       n.intoVariable().accept( this );
       n.fromVariable().accept( this );
   }
@@ -115,14 +115,14 @@ Results are stored as an array: `results[0]`, `results[1]`, etc.
 - **Why different**: Query strings have no AST nodes to validate
 
 **`libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`**
-- Added import for `SelectStatement`
+- Added import for `PathsStatement`
 - Pass through query strings unchanged, optimize variable paths:
   ```java
   @Override
-  public void visit( SelectStatement n ) {
-      currNode = new SelectStatement(
+  public void visit( PathsStatement n ) {
+      currNode = new PathsStatement(
           n.context(),
-          n.selectQuery(),                    // Pass through string
+          n.pathsQuery(),                    // Pass through string
           optimizePath( n.intoVariable() ),
           optimizePath( n.fromVariable() ),
           n.whereQuery() );                   // Pass through string
@@ -131,7 +131,7 @@ Results are stored as an array: `results[0]`, `results[1]`, etc.
 
 #### Empty Visitor Stubs
 
-Added empty `visit(SelectStatement n) {}` implementations to:
+Added empty `visit(PathsStatement n) {}` implementations to:
 - `libjolie/src/main/java/jolie/lang/parse/TypeChecker.java`
 - `libjolie/src/main/java/jolie/lang/parse/module/SymbolReferenceResolver.java`
 - `libjolie/src/main/java/jolie/lang/parse/module/SymbolTableGenerator.java`
@@ -150,22 +150,22 @@ ANTLR plugin runs during compilation, generating parser classes in `libjolie/tar
 
 ### Runtime Classpath
 
-When executing Jolie programs with SELECT, ANTLR runtime JAR must be on classpath:
+When executing Jolie programs with PATHS, ANTLR runtime JAR must be on classpath:
 
 ```bash
-java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes:libjolie/target/generated-sources/antlr4:test/select/antlr4-runtime-4.13.1.jar" jolie.Jolie program.ol
+java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes:libjolie/target/generated-sources/antlr4:test/paths/antlr4-runtime-4.13.1.jar" jolie.Jolie program.ol
 ```
 
-**Note**: The ANTLR runtime JAR is included in `test/select/antlr4-runtime-4.13.1.jar` for convenience.
+**Note**: The ANTLR runtime JAR is included in `test/paths/antlr4-runtime-4.13.1.jar` for convenience.
 
 ## Key Architectural Decisions
 
 1. **Runtime parsing**: Query strings parsed at runtime (not compile-time) using ANTLR
-2. **String-based AST**: `SelectStatement` stores strings, not `OLSyntaxNode` expression trees
+2. **String-based AST**: `PathsStatement` stores strings, not `OLSyntaxNode` expression trees
 3. **No expression building**: OOITBuilder passes strings directly, doesn't call `buildExpression()`
 4. **No semantic validation**: SemanticVerifier skips query strings, only visits variable paths
 5. **Direct array storage**: Results stored as `results[0]`, `results[1]` using `getValueVector()`
-6. **Static executor**: SelectQueryExecutor provides static `execute()` method, no instantiation
+6. **Static executor**: PathsQueryExecutor provides static `execute()` method, no instantiation
 
 ## File Change Necessity Analysis
 
@@ -174,27 +174,27 @@ java -cp "libjolie/target/classes:jolie/target/classes:jolie-cli/target/classes:
 Cannot compile or execute without these files:
 
 1. **libjolie/pom.xml** - ANTLR4 runtime dependency + Maven plugin
-2. **libjolie/src/main/antlr4/jolie/lang/parse/select/SelectQuery.g4** - Grammar for query syntax
-3. **libjolie/src/main/java/jolie/lang/parse/Scanner.java** - SELECT, INTO, WHERE tokens
+2. **libjolie/src/main/antlr4/jolie/lang/parse/paths/SelectQuery.g4** - Grammar for query syntax
+3. **libjolie/src/main/java/jolie/lang/parse/Scanner.java** - PATHS, INTO, WHERE tokens
 4. **libjolie/src/main/java/jolie/lang/Keywords.java** - Keyword registration
 5. **libjolie/src/main/java/jolie/lang/parse/OLParser.java** - Parsing logic with string extraction
-6. **libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java** - AST node (string-based fields)
+6. **libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java** - AST node (string-based fields)
 7. **libjolie/src/main/java/jolie/lang/parse/OLVisitor.java** - Visitor interface signature
 8. **libjolie/src/main/java/jolie/lang/parse/UnitOLVisitor.java** - Default visitor implementation
-9. **jolie/src/main/java/jolie/process/SelectProcess.java** - Runtime execution process
-10. **jolie/src/main/java/jolie/runtime/select/SelectQueryExecutor.java** - ANTLR query executor
+9. **jolie/src/main/java/jolie/process/PathsProcess.java** - Runtime execution process
+10. **jolie/src/main/java/jolie/runtime/paths/PathsQueryExecutor.java** - ANTLR query executor
 
 ### Files With Actual Implementation Logic
 
-These files contain non-trivial logic for SELECT:
+These files contain non-trivial logic for PATHS:
 
-1. **jolie/src/main/java/jolie/OOITBuilder.java** - Creates SelectProcess, passes query strings
+1. **jolie/src/main/java/jolie/OOITBuilder.java** - Creates PathsProcess, passes query strings
 2. **libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java** - Validates variable paths (skips queries)
 3. **libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java** - Optimizes variable paths (passes through queries)
 
 ### Empty Visitor Stubs (Required for Compilation)
 
-These files contain only empty `visit(SelectStatement n) {}` stubs.
+These files contain only empty `visit(PathsStatement n) {}` stubs.
 Required because all classes implementing `UnitOLVisitor` must provide the method:
 
 1. **libjolie/src/main/java/jolie/lang/parse/TypeChecker.java**
@@ -212,20 +212,20 @@ Required because all classes implementing `UnitOLVisitor` must provide the metho
 5. **Missing ANTLR runtime at execution**: JAR must be on classpath when running Jolie programs
 6. **Wrong result storage**: Use `getValueVector()` for array storage, not nested fields
 
-## Converting SELECT to an Expression Primitive
+## Converting PATHS to an Expression Primitive
 
-The SELECT primitive was originally implemented as a statement but can also be used as an expression with the deep copy operator `<<`. This section documents the conversion process.
+The PATHS primitive was originally implemented as a statement but can also be used as an expression with the deep copy operator `<<`. This section documents the conversion process.
 
 ### Expression vs Statement Usage
 
 **Statement syntax (original):**
 ```jolie
-select "$.*" into results from root where ". == 10"
+paths "$.*" into results from root where ". == 10"
 ```
 
 **Expression syntax (with deep copy):**
 ```jolie
-result << select "$.*" into results from root where ". == 10"
+result << paths "$.*" into results from root where ". == 10"
 ```
 
 Both syntaxes work simultaneously. The INTO keyword remains functional in both cases.
@@ -234,38 +234,38 @@ Both syntaxes work simultaneously. The INTO keyword remains functional in both c
 
 #### 1. Core Expression Implementation (Strictly Required)
 
-**`libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectExpressionNode.java`**
-- New AST node in `expression` package (not `ast` package like SelectStatement)
-- Identical structure to SelectStatement: 4 fields (2 strings, 2 VariablePathNode)
+**`libjolie/src/main/java/jolie/lang/parse/ast/expression/PathsExpressionNode.java`**
+- New AST node in `expression` package (not `ast` package like PathsStatement)
+- Identical structure to PathsStatement: 4 fields (2 strings, 2 VariablePathNode)
 - Must implement `accept()` method calling `visitor.visit(this, ctx)`
 
-**`jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`**
+**`jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`**
 - Implements `Expression` interface with two methods:
-  - `Value evaluate()` - executes SELECT query and returns result Value
+  - `Value evaluate()` - executes PATHS query and returns result Value
   - `Expression cloneExpression(TransformationReason)` - clones for spawn/parallel
-- Contains same logic as SelectProcess.run() but returns a Value
+- Contains same logic as PathsProcess.run() but returns a Value
 - Returns Value with structure: `result.getChildren("result").get(i)` containing matching paths
 
 **`libjolie/src/main/java/jolie/lang/parse/OLVisitor.java`**
-- Add interface method: `R visit(SelectExpressionNode n, C ctx);`
+- Add interface method: `R visit(PathsExpressionNode n, C ctx);`
 - Placed with other expression visitor methods (near IfExpressionNode)
 
 **`libjolie/src/main/java/jolie/lang/parse/OLParser.java`**
-- Add `case SELECT:` block in `parseFactor()` method (NOT parseBasicStatement)
+- Add `case PATHS:` block in `parseFactor()` method (NOT parseBasicStatement)
 - Identical parsing logic to statement version
-- Creates `SelectExpressionNode` instead of `SelectStatement`
-- Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+- Creates `PathsExpressionNode` instead of `PathsStatement`
+- Add import: `import jolie.lang.parse.ast.expression.PathsExpressionNode;`
 
 **`jolie/src/main/java/jolie/OOITBuilder.java`**
-- Add `visit(SelectExpressionNode n)` method
+- Add `visit(PathsExpressionNode n)` method
 - Sets `currExpression` (not `currProcess`)
-- Creates `SelectExpression` with same parameters as SelectProcess
-- Add imports for both SelectExpressionNode and SelectExpression
+- Creates `PathsExpression` with same parameters as PathsProcess
+- Add imports for both PathsExpressionNode and PathsExpression
 
 #### 2. Visitor Interface Implementation (Required for Compilation)
 
 **`libjolie/src/main/java/jolie/lang/parse/UnitOLVisitor.java`**
-- Add method declaration: `void visit(SelectExpressionNode n);`
+- Add method declaration: `void visit(PathsExpressionNode n);`
 - Add default implementation delegating to single-parameter visit
 
 All classes implementing UnitOLVisitor must add visit method:
@@ -273,30 +273,30 @@ All classes implementing UnitOLVisitor must add visit method:
 **Files with Logic (actual implementation):**
 - `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
   - Visits variable paths: `n.intoVariable().accept(this); n.fromVariable().accept(this);`
-  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+  - Add import: `import jolie.lang.parse.ast.expression.PathsExpressionNode;`
 
 - `libjolie/src/main/java/jolie/lang/parse/TypeChecker.java`
   - Same as SemanticVerifier
 
 - `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
-  - Optimizes variable paths, reconstructs SelectExpressionNode
-  - Pattern: `currNode = new SelectExpressionNode(n.context(), n.selectQuery(), optimizeNode(n.intoVariable()), optimizeNode(n.fromVariable()), n.whereQuery());`
-  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+  - Optimizes variable paths, reconstructs PathsExpressionNode
+  - Pattern: `currNode = new PathsExpressionNode(n.context(), n.pathsQuery(), optimizeNode(n.intoVariable()), optimizeNode(n.fromVariable()), n.whereQuery());`
+  - Add import: `import jolie.lang.parse.ast.expression.PathsExpressionNode;`
 
 - `libjolie/src/main/java/jolie/lang/parse/module/SymbolReferenceResolver.java`
   - Visits variable paths
-  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+  - Add import: `import jolie.lang.parse.ast.expression.PathsExpressionNode;`
 
 - `libjolie/src/main/java/jolie/lang/parse/module/SymbolTableGenerator.java`
   - Visits variable paths
-  - Add import: `import jolie.lang.parse.ast.expression.SelectExpressionNode;`
+  - Add import: `import jolie.lang.parse.ast.expression.PathsExpressionNode;`
 
 **Files with Empty Stubs (satisfy interface only):**
 - `libjolie/src/main/java/jolie/lang/parse/util/impl/ProgramInspectorCreatorVisitor.java`
-  - Empty implementation: `public void visit(SelectExpressionNode n) { n.intoVariable().accept(this); n.fromVariable().accept(this); }`
+  - Empty implementation: `public void visit(PathsExpressionNode n) { n.intoVariable().accept(this); n.fromVariable().accept(this); }`
 
 - `tools/jolie2plasma/src/main/java/joliex/plasma/impl/InterfaceVisitor.java`
-  - Empty stub: `public void visit(SelectExpressionNode n) {}`
+  - Empty stub: `public void visit(PathsExpressionNode n) {}`
 
 ### Key Architectural Decisions for Expressions
 
@@ -310,8 +310,8 @@ All classes implementing UnitOLVisitor must add visit method:
 ### Strictly Required vs Interface Satisfaction
 
 **Strictly Required (7 files):**
-1. SelectExpressionNode.java (AST)
-2. SelectExpression.java (runtime)
+1. PathsExpressionNode.java (AST)
+2. PathsExpression.java (runtime)
 3. OLVisitor.java (interface signature)
 4. OLParser.java (parsing logic)
 5. OOITBuilder.java (builds runtime from AST)
@@ -327,10 +327,10 @@ All classes implementing UnitOLVisitor must add visit method:
 ### Common Pitfalls for Expression Conversion
 
 1. **Parsing in wrong location**: Must add to parseFactor(), not parseBasicStatement()
-2. **Missing imports**: Each visitor file needs SelectExpressionNode import
+2. **Missing imports**: Each visitor file needs PathsExpressionNode import
 3. **Wrong builder field**: Must set currExpression, not currProcess
 4. **Forgetting return value**: evaluate() must return a Value, cannot be void
-5. **Missing import in OOITBuilder**: Need both AST and runtime SelectExpression imports
+5. **Missing import in OOITBuilder**: Need both AST and runtime PathsExpression imports
 6. **Incomplete visitor updates**: All 7 UnitOLVisitor implementations must be updated
 
 ## Impact Summary
@@ -341,7 +341,7 @@ All classes implementing UnitOLVisitor must add visit method:
 
 **AST Layer**: Introduces string-based AST fields (break from expression-node pattern)
 
-**Visitor Pattern**: All visitor implementations must add `visit(SelectStatement)` method
+**Visitor Pattern**: All visitor implementations must add `visit(PathsStatement)` method
 
 **Semantic Analysis**: Query strings bypass normal expression validation
 
@@ -349,9 +349,9 @@ All classes implementing UnitOLVisitor must add visit method:
 
 ## Test Coverage
 
-Tests located in `test/select/` verify the following features:
+Tests located in `test/paths/` verify the following features:
 
-**SELECT clause navigation:**
+**PATHS clause navigation:**
 - `$.*` - wildcard navigation
 - `$[*]` - array iteration
 - `$..field` - descendant search
@@ -372,11 +372,11 @@ Tests located in `test/select/` verify the following features:
 - `()` - parentheses for precedence
 
 **Expression usage:**
-- `test_expression_equality.ol` - Verifies SELECT as expression with deep copy operator
+- `test_expression_equality.ol` - Verifies PATHS as expression with deep copy operator
 - Compares `results1` (INTO side effect) with `result2.result` (expression return value)
 - Validates that both the side effect and return value contain identical results
 
 **Run tests:**
 ```bash
-cd test/select && python3 run_tests.py
+cd test/paths && python3 run_tests.py
 ```

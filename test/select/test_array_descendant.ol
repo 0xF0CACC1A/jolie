@@ -17,7 +17,7 @@ main {
     companies[0].projects[2].status = "in_progress";
     companies[0].projects[2].technologies[0] = "Java";
 
-    select "$[*].projects[*]" into results from companies
+    paths "$[*].projects[*]" into results from companies
     where ".status == in_progress && ..technologies[*] == Python";
 
     i = 0;

@@ -16,7 +16,7 @@ main {
     items[3].type = "user";
     items[3].status = "active";
 
-    select "$[*]" into results from items where ".type == user && .status == active";
+    paths "$[*]" into results from items where ".type == user && .status == active";
 
     i = 0;
     while( i < #results ) {

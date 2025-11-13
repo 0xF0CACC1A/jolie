@@ -1,11 +1,11 @@
-// Test SELECT as expression - validates it works without printing
+// Test PATHS as expression - validates it works without printing
 main {
     root.x = 10;
     root.y = 20;
     root.z = 10;
 
-    // Use SELECT as expression with deep copy operator
-    result << select "$.*" into results from root where ". == 10";
+    // Use PATHS as expression with deep copy operator
+    result << paths "$.*" into results from root where ". == 10";
 
     // Verify results array is populated (2 elements: root.x and root.z)
     if( #results != 2 ) {

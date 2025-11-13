@@ -1,34 +1,34 @@
-# Removal of INTO Clause from SELECT Primitive
+# Removal of INTO Clause from PATHS Primitive
 
 ## Summary
 
-This document describes the changes made to remove the `INTO` clause from Jolie's SELECT primitive, replacing it with the `<<` operator for result assignment.
+This document describes the changes made to remove the `INTO` clause from Jolie's PATHS primitive, replacing it with the `<<` operator for result assignment.
 
 ## Motivation
 
-The SELECT primitive originally used an explicit `INTO` clause to specify where results should be stored:
+The PATHS primitive originally used an explicit `INTO` clause to specify where results should be stored:
 ```jolie
-select "$.*" into results from data where $ == 5
+paths "$.*" into results from data where $ == 5
 ```
 
 This syntax was redundant since Jolie already has the `<<` operator for assignment. The new syntax is more consistent with the rest of the language:
 ```jolie
-results << select "$.*" from data where $ == 5
+results << paths "$.*" from data where $ == 5
 ```
 
 ## Syntax Changes
 
 ### Before
 ```jolie
-select "query" into results from data where expression
+paths "query" into results from data where expression
 ```
 
 ### After
 ```jolie
-results << select "query" from data where expression
+results << paths "query" from data where expression
 ```
 
-The `INTO variable` clause has been completely removed. SELECT can now be used as:
+The `INTO variable` clause has been completely removed. PATHS can now be used as:
 1. **Expression form** (with `<<`): Returns results that can be assigned to a variable
 2. **Statement form** (standalone): Evaluates but doesn't store results (effectively a no-op)
 
@@ -36,35 +36,35 @@ The `INTO variable` clause has been completely removed. SELECT can now be used a
 
 ### 1. Parser Changes (OLParser.java)
 
-**SelectStatement parsing** (lines 2511-2520):
+**PathsStatement parsing** (lines 2511-2520):
 - Removed: `eat(Scanner.TokenType.INTO, ...)`
 - Removed: `VariablePathNode intoVar = parseVariablePath()`
 - Changed constructor call to exclude `intoVar` parameter
 
-**SelectExpressionNode parsing** (lines 3686-3695):
-- Same changes as SelectStatement
+**PathsExpressionNode parsing** (lines 3686-3695):
+- Same changes as PathsStatement
 
 ### 2. AST Changes
 
-**SelectStatement.java**:
+**PathsStatement.java**:
 - Removed field: `private final VariablePathNode intoVariable`
 - Removed accessor: `public VariablePathNode intoVariable()`
-- Updated constructor to accept only: `selectQuery`, `fromVariable`, `whereExpression`
+- Updated constructor to accept only: `pathsQuery`, `fromVariable`, `whereExpression`
 
-**SelectExpressionNode.java**:
-- Identical changes to SelectStatement
+**PathsExpressionNode.java**:
+- Identical changes to PathsStatement
 
 ### 3. Runtime Changes
 
-**SelectProcess.java**:
+**PathsProcess.java**:
 - Removed field: `private final VariablePath intoVariable`
 - Removed parameter from constructor
 - Modified `run()` method:
   - Removed result storage logic
   - Added comment explaining statement form is now no-op
-  - SELECT as statement computes results but doesn't store them
+  - PATHS as statement computes results but doesn't store them
 
-**SelectExpression.java**:
+**PathsExpression.java**:
 - Removed field: `private final VariablePath intoVariable`
 - Removed parameter from constructor
 - Modified `evaluate()` method:
@@ -103,15 +103,15 @@ During this refactoring, we also removed all references to `HasExpressionNode`, 
 
 ### AST and Parser (5 files)
 1. `libjolie/src/main/java/jolie/lang/parse/OLParser.java`
-2. `libjolie/src/main/java/jolie/lang/parse/ast/SelectStatement.java`
-3. `libjolie/src/main/java/jolie/lang/parse/ast/expression/SelectExpressionNode.java`
+2. `libjolie/src/main/java/jolie/lang/parse/ast/PathsStatement.java`
+3. `libjolie/src/main/java/jolie/lang/parse/ast/expression/PathsExpressionNode.java`
 4. `libjolie/src/main/java/jolie/lang/parse/OLParseTreeOptimizer.java`
 5. `libjolie/src/main/java/jolie/lang/parse/SemanticVerifier.java`
 
 ### Runtime (3 files)
 6. `jolie/src/main/java/jolie/OOITBuilder.java`
-7. `jolie/src/main/java/jolie/process/SelectProcess.java`
-8. `jolie/src/main/java/jolie/runtime/expression/SelectExpression.java`
+7. `jolie/src/main/java/jolie/process/PathsProcess.java`
+8. `jolie/src/main/java/jolie/runtime/expression/PathsExpression.java`
 
 ### Visitor Interfaces and Implementations (7 files)
 9. `libjolie/src/main/java/jolie/lang/parse/OLVisitor.java`
@@ -136,7 +136,7 @@ main {
     root.z = 5;
 
     // New syntax with << operator
-    results << select "$.*" from root where $ == 5;
+    results << paths "$.*" from root where $ == 5;
 
     println@Console("Results with $ == 5:")();
     i = 0;
@@ -165,37 +165,37 @@ Results with $ == 5:
 
 ## Breaking Changes
 
-This is a **breaking change** for existing Jolie code using SELECT:
+This is a **breaking change** for existing Jolie code using PATHS:
 
 ### Migration Guide
 
 **Old code:**
 ```jolie
-select "$.items[*]" into results from data where $ == 5
+paths "$.items[*]" into results from data where $ == 5
 ```
 
 **New code:**
 ```jolie
-results << select "$.items[*]" from data where $ == 5
+results << paths "$.items[*]" from data where $ == 5
 ```
 
 **Steps to migrate:**
-1. Remove `into variableName` from SELECT statement
-2. Add `variableName <<` before SELECT keyword
+1. Remove `into variableName` from PATHS statement
+2. Add `variableName <<` before PATHS keyword
 3. Results are now stored in `variableName.results[i]` instead of `variableName[i]`
 
 ## Related Work
 
 This change builds upon:
-- **Previous commit**: "Implement native Jolie WHERE clause for SELECT primitive"
+- **Previous commit**: "Implement native Jolie WHERE clause for PATHS primitive"
   - Converted WHERE from ANTLR string to native Jolie expressions
   - Added `$` operator for current value reference
 
-Combined, these changes make SELECT fully integrated with Jolie's native syntax rather than using external DSL constructs.
+Combined, these changes make PATHS fully integrated with Jolie's native syntax rather than using external DSL constructs.
 
 ## Future Considerations
 
 1. **Result format**: Currently returns `result.results[0]`, `result.results[1]`. Could be simplified to return a direct array.
-2. **Statement form**: SELECT as a standalone statement is now a no-op. Consider removing support or adding a warning.
-3. **Documentation**: All SELECT documentation and examples need updating.
-4. **Migration tool**: Could create a script to automatically convert old SELECT syntax to new syntax.
+2. **Statement form**: PATHS as a standalone statement is now a no-op. Consider removing support or adding a warning.
+3. **Documentation**: All PATHS documentation and examples need updating.
+4. **Migration tool**: Could create a script to automatically convert old PATHS syntax to new syntax.

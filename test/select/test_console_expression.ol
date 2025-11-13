@@ -5,10 +5,10 @@ main {
     root.y = 20;
     root.z = 10;
 
-    println@Console("Testing SELECT as expression")();
+    println@Console("Testing PATHS as expression")();
     println@Console("============================")();
 
-    result << select "$.*" into results from root where ". == 10";
+    result << paths "$.*" into results from root where ". == 10";
 
     println@Console("Results from INTO (side effect):")();
     i = 0;

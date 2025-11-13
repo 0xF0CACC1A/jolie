@@ -7,8 +7,8 @@ import java.util.List;
 import java.util.Collections;
 
 /**
- * Represents the current value ($) in a SELECT WHERE expression. This special node is used to
- * reference the value being filtered during SELECT evaluation. Can optionally include field path
+ * Represents the current value ($) in a PATHS WHERE expression. This special node is used to
+ * reference the value being filtered during PATHS evaluation. Can optionally include field path
  * (e.g., $.field, $.field.subfield) or recursive field (e.g., $..field)
  */
 public class CurrentValueNode extends OLSyntaxNode {

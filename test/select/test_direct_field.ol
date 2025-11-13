@@ -15,7 +15,7 @@ main {
 
     projects[3].status = "active";
 
-    select "$[*]" into results from projects where ".status == active && .technologies == Python";
+    paths "$[*]" into results from projects where ".status == active && .technologies == Python";
 
     i = 0;
     while( i < #results ) {

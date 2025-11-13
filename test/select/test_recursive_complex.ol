@@ -7,7 +7,7 @@ main {
     tree.d.deep.value = 25;
     tree.e.value = 2;
 
-    res << select tree..value where $ > 0 && ($ < 10 || $ > 20);
+    res << paths tree..value where $ > 0 && ($ < 10 || $ > 20);
 
     i = 0;
     while( i < #res.results ) {

@@ -6,7 +6,7 @@ main {
     tree.c.nested.value = 25;
     tree.d.value = 8;
 
-    res << select tree..value where $ < 5 || $ > 20;
+    res << paths tree..value where $ < 5 || $ > 20;
 
     i = 0;
     while( i < #res.results ) {

@@ -6,19 +6,19 @@ import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.context.ParsingContext;
 
 /**
- * AST node representing a SELECT path (e.g., var, var.*, var.*.*, var..field) Supports multiple
- * wildcard levels for deep selection and recursive field lookup.
+ * AST node representing a PATHS path (e.g., var, var.*, var.*.*, var..field) Supports multiple
+ * wildcard levels for deep path specification and recursive field lookup.
  */
-public class SelectPathNode extends OLSyntaxNode {
+public class PathSpecNode extends OLSyntaxNode {
 	private final VariablePathNode baseVariable;
 	private final int wildcardDepth;
 	private final String recursiveField;
 
-	public SelectPathNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth ) {
+	public PathSpecNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth ) {
 		this( context, baseVariable, wildcardDepth, null );
 	}
 
-	public SelectPathNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth,
+	public PathSpecNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth,
 		String recursiveField ) {
 		super( context );
 		this.baseVariable = baseVariable;

@@ -8,7 +8,7 @@ main {
     tree.c.status = "inactive";
     tree.c.priority = 9;
 
-    res << select tree.* where $..status == "active" && $.priority > 5;
+    res << paths tree.* where $..status == "active" && $.priority > 5;
 
     i = 0;
     while( i < #res.results ) {

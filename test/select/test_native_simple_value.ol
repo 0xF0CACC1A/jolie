@@ -1,4 +1,4 @@
-// Test: Native SELECT with simple value comparison
+// Test: Native PATHS with simple value comparison
 // Expected output: data.z, data.x
 
 include "console.iol"
@@ -8,7 +8,7 @@ main {
     data.y = 200;
     data.z = 100;
 
-    res << select data.* where $ == 100;
+    res << paths data.* where $ == 100;
 
     i = 0;
     while( i < #res.results ) {

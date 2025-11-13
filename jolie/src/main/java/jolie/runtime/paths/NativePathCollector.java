@@ -1,4 +1,4 @@
-package jolie.runtime.select;
+package jolie.runtime.paths;
 
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
@@ -6,7 +6,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * Native path collector for SELECT operations without ANTLR dependency. Collects paths from a Value
+ * Native path collector for PATHS operations without ANTLR dependency. Collects paths from a Value
  * tree based on wildcard depth or recursive field lookup.
  */
 public class NativePathCollector {

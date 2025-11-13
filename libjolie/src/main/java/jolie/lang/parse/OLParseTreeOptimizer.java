@@ -83,7 +83,7 @@ import jolie.lang.parse.ast.SynchronizedStatement;
 import jolie.lang.parse.ast.ThrowStatement;
 import jolie.lang.parse.ast.TypeCastExpressionNode;
 import jolie.lang.parse.ast.UndefStatement;
-import jolie.lang.parse.ast.SelectStatement;
+import jolie.lang.parse.ast.PathsStatement;
 import jolie.lang.parse.ast.ValueVectorSizeExpressionNode;
 import jolie.lang.parse.ast.VariablePathNode;
 import jolie.lang.parse.ast.WhileStatement;
@@ -98,7 +98,7 @@ import jolie.lang.parse.ast.expression.ConstantIntegerExpression;
 import jolie.lang.parse.ast.expression.ConstantLongExpression;
 import jolie.lang.parse.ast.expression.ConstantStringExpression;
 import jolie.lang.parse.ast.expression.CurrentValueNode;
-import jolie.lang.parse.ast.expression.SelectPathNode;
+import jolie.lang.parse.ast.expression.PathSpecNode;
 import jolie.lang.parse.ast.expression.FreshValueExpressionNode;
 import jolie.lang.parse.ast.expression.IfExpressionNode;
 import jolie.lang.parse.ast.expression.InlineTreeExpressionNode;
@@ -107,7 +107,7 @@ import jolie.lang.parse.ast.expression.IsTypeExpressionNode;
 import jolie.lang.parse.ast.expression.NotExpressionNode;
 import jolie.lang.parse.ast.expression.OrConditionNode;
 import jolie.lang.parse.ast.expression.ProductExpressionNode;
-import jolie.lang.parse.ast.expression.SelectExpressionNode;
+import jolie.lang.parse.ast.expression.PathsExpressionNode;
 import jolie.lang.parse.ast.expression.SolicitResponseExpressionNode;
 import jolie.lang.parse.ast.expression.SumExpressionNode;
 import jolie.lang.parse.ast.expression.VariableExpressionNode;
@@ -752,9 +752,9 @@ public class OLParseTreeOptimizer {
 		}
 
 		@Override
-		public void visit( SelectExpressionNode n ) {
-			currNode = new SelectExpressionNode( n.context(),
-				(SelectPathNode) optimizeNode( n.selectPath() ),
+		public void visit( PathsExpressionNode n ) {
+			currNode = new PathsExpressionNode( n.context(),
+				(PathSpecNode) optimizeNode( n.pathSpec() ),
 				optimizeNode( n.whereExpression() ) );
 		}
 
@@ -794,17 +794,17 @@ public class OLParseTreeOptimizer {
 		}
 
 		@Override
-		public void visit( SelectStatement n ) {
-			currNode = new SelectStatement(
+		public void visit( PathsStatement n ) {
+			currNode = new PathsStatement(
 				n.context(),
-				(SelectPathNode) optimizeNode( n.selectPath() ),
+				(PathSpecNode) optimizeNode( n.pathSpec() ),
 				optimizeNode( n.whereExpression() ) );
 		}
 
 		@Override
-		public void visit( SelectPathNode n ) {
-			// For now, SelectPathNode doesn't need optimization - just preserve it
-			currNode = new SelectPathNode(
+		public void visit( PathSpecNode n ) {
+			// For now, PathSpecNode doesn't need optimization - just preserve it
+			currNode = new PathSpecNode(
 				n.context(),
 				optimizePath( n.baseVariable() ),
 				n.wildcardDepth(),

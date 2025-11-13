@@ -8,7 +8,7 @@ main {
     data.items.y = 20;
     data.items.z = 10;
 
-    select "$.*" into results from data.items where ". == 10";
+    paths "$.*" into results from data.items where ". == 10";
 
     i = 0;
     while( i < #results ) {

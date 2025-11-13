@@ -72,7 +72,7 @@ public class Keywords {
 	public static final String FOREACH = "foreach";
 	public static final String WITH = "with";
 	public static final String UNDEF = "undef";
-	public static final String SELECT = "select";
+	public static final String PATHS = "paths";
 	public static final String INTO = "into";
 	public static final String WHERE = "where";
 	public static final String SYNCHRONIZED = "synchronized";
@@ -121,7 +121,7 @@ public class Keywords {
 		List.of( "execution", "init", "main", "inputPort", "outputPort", "embed", "as", "define" );
 
 	private static final List< String > MAIN_KEYWORDS =
-		List.of( "for", "while", "if", "else", "else if", "foreach", "with", "undef", "select", "into", "where",
+		List.of( "for", "while", "if", "else", "else if", "foreach", "with", "undef", "paths", "into", "where",
 			"synchronized", "scope", "install", "spawn", "over", "in", "throw", "cH", "comp", "nullProcess" );
 
 	private static final List< String > INTERFACE_KEYWORDS = List.of( "oneWay", "requestResponse" );
