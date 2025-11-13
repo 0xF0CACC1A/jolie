@@ -14,18 +14,25 @@ public class PathsProcess implements Process {
 	private final VariablePath pathSpec;
 	private final int wildcardDepth;
 	private final String recursiveField;
+	private final String arrayWildcardPath;
 	private final Expression whereExpression;
 
 	public PathsProcess( VariablePath pathSpec, int wildcardDepth,
 		Expression whereExpression ) {
-		this( pathSpec, wildcardDepth, null, whereExpression );
+		this( pathSpec, wildcardDepth, null, null, whereExpression );
 	}
 
 	public PathsProcess( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		Expression whereExpression ) {
+		this( pathSpec, wildcardDepth, recursiveField, null, whereExpression );
+	}
+
+	public PathsProcess( VariablePath pathSpec, int wildcardDepth, String recursiveField,
+		String arrayWildcardPath, Expression whereExpression ) {
 		this.pathSpec = pathSpec;
 		this.wildcardDepth = wildcardDepth;
 		this.recursiveField = recursiveField;
+		this.arrayWildcardPath = arrayWildcardPath;
 		this.whereExpression = whereExpression;
 	}
 
@@ -35,6 +42,7 @@ public class PathsProcess implements Process {
 			(VariablePath) pathSpec.cloneExpression( reason ),
 			wildcardDepth,
 			recursiveField,
+			arrayWildcardPath,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -48,7 +56,10 @@ public class PathsProcess implements Process {
 
 		// Use native path collector
 		List< String > candidatePaths;
-		if( recursiveField != null ) {
+		if( arrayWildcardPath != null ) {
+			// Array wildcard: data[*] or tree.items[*]
+			candidatePaths = NativePathCollector.collectArrayPaths( vec, rootPath, arrayWildcardPath );
+		} else if( recursiveField != null ) {
 			// Recursive field search: var..field
 			candidatePaths = NativePathCollector.collectPathsRecursive( vec, rootPath, recursiveField );
 		} else {
@@ -134,6 +145,14 @@ public class PathsProcess implements Process {
 		Value current = vec.first();
 		if( relativePath.isEmpty() ) {
 			return current;
+		}
+
+		// Special case: if relativePath starts with [, it's a direct array access on vec
+		if( relativePath.startsWith( "[" ) ) {
+			int index = Integer.parseInt( relativePath.substring( 1, relativePath.indexOf( ']' ) ) );
+			if( index >= vec.size() )
+				return null;
+			return vec.get( index );
 		}
 
 		String[] parts = relativePath.split( "\\." );

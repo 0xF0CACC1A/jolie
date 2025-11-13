@@ -49,6 +49,66 @@ public class NativePathCollector {
 		return paths;
 	}
 
+	/**
+	 * Collect all array element paths for a given field path using array wildcard [*].
+	 *
+	 * @param vec ValueVector to start from (the base variable's vector)
+	 * @param rootPath Base path (e.g., "tree" or "data")
+	 * @param fieldPath Field path to array: "" (empty) for base array (data[*]), "items" for single
+	 *        field (tree.items[*]), "field.subfield" for nested (tree.field.subfield[*])
+	 * @return List of paths like "data[0]", "data[1]" or "tree.items[0]", "tree.items[1]"
+	 */
+	public static List< String > collectArrayPaths( ValueVector vec, String rootPath, String fieldPath ) {
+		List< String > paths = new ArrayList<>();
+
+		// Determine which ValueVector to expand based on fieldPath
+		ValueVector arrayVector = null;
+		String fullPathPrefix;
+
+		if( fieldPath == null || fieldPath.isEmpty() ) {
+			// Base variable array: data[*]
+			// The vec parameter is already the array we want to expand
+			arrayVector = vec;
+			fullPathPrefix = rootPath;
+		} else {
+			// Nested field array: tree.items[*] or tree.field.subfield[*]
+			// Navigate to the field iteratively (no recursion, no vivification)
+			Value current = vec.first();
+			String[] fieldParts = fieldPath.split( "\\." );
+
+			for( String fieldName : fieldParts ) {
+				// Check existence before accessing (avoid vivification)
+				if( !current.hasChildren( fieldName ) ) {
+					// Field doesn't exist, return empty list
+					return paths;
+				}
+				// For all but the last field part, navigate deeper into the structure
+				if( fieldName.equals( fieldParts[ fieldParts.length - 1 ] ) ) {
+					// This is the last field - we want its ValueVector, not its first Value
+					// Use getChildren() to get the ValueVector at this field
+					arrayVector = current.getChildren( fieldName );
+				} else {
+					// Not the last field, continue navigation
+					current = current.getFirstChild( fieldName );
+				}
+			}
+
+			// Build the full path prefix: rootPath + "." + fieldPath
+			fullPathPrefix = rootPath + "." + fieldPath;
+		}
+
+		// Now iterate through all array indices - iterative, no recursion
+		// arrayVector will be non-null here if we got this far
+		if( arrayVector != null ) {
+			for( int i = 0; i < arrayVector.size(); i++ ) {
+				String fullPath = fullPathPrefix + "[" + i + "]";
+				paths.add( fullPath );
+			}
+		}
+
+		return paths;
+	}
+
 	private static void collectPathsRecursive( Value node, String currentPath, int remainingDepth,
 		List< String > paths ) {
 		if( remainingDepth == 0 ) {
