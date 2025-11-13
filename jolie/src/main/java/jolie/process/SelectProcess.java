@@ -6,19 +6,19 @@ import jolie.runtime.ValueVector;
 import jolie.runtime.VariablePath;
 import jolie.runtime.expression.Expression;
 import jolie.runtime.expression.CurrentValueExpression;
-import jolie.runtime.select.SelectQueryExecutor;
+import jolie.runtime.select.NativePathCollector;
 import java.util.List;
 import java.util.ArrayList;
 
 public class SelectProcess implements Process {
 	private final VariablePath selectPath;
-	private final boolean isWildcard;
+	private final int wildcardDepth;
 	private final Expression whereExpression;
 
-	public SelectProcess( VariablePath selectPath, boolean isWildcard,
+	public SelectProcess( VariablePath selectPath, int wildcardDepth,
 		Expression whereExpression ) {
 		this.selectPath = selectPath;
-		this.isWildcard = isWildcard;
+		this.wildcardDepth = wildcardDepth;
 		this.whereExpression = whereExpression;
 	}
 
@@ -26,7 +26,7 @@ public class SelectProcess implements Process {
 	public Process copy( TransformationReason reason ) {
 		return new SelectProcess(
 			(VariablePath) selectPath.cloneExpression( reason ),
-			isWildcard,
+			wildcardDepth,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -37,17 +37,9 @@ public class SelectProcess implements Process {
 
 		String rootPath = extractRootPath( selectPath );
 		ValueVector vec = selectPath.getValueVector();
-		Object source = vec.size() > 1 ? vec : vec.first();
 
-		// Convert native path to ANTLR query string (for now, only wildcard supported)
-		String selectQuery = isWildcard ? "$.*" : "$";
-
-		// Execute SELECT query without WHERE filtering (pass null to match all)
-		List< String > candidatePaths = SelectQueryExecutor.execute(
-			source,
-			selectQuery,
-			null,
-			rootPath );
+		// Use native path collector instead of ANTLR
+		List< String > candidatePaths = NativePathCollector.collectPaths( vec, rootPath, wildcardDepth );
 
 		// Filter candidates using native Jolie WHERE expression
 		// Note: SELECT as a statement (without <<) has no effect since there's no INTO variable
@@ -57,6 +49,9 @@ public class SelectProcess implements Process {
 
 		for( String path : candidatePaths ) {
 			Value candidateValue = getValueAtPath( vec, path, rootPath );
+			if( candidateValue == null )
+				continue; // Path doesn't exist, skip
+
 			if( currentValueExpr != null ) {
 				currentValueExpr.setCurrentNode( candidateValue );
 			}
@@ -113,8 +108,18 @@ public class SelectProcess implements Process {
 				int bracketPos = part.indexOf( '[' );
 				String fieldName = part.substring( 0, bracketPos );
 				int index = Integer.parseInt( part.substring( bracketPos + 1, part.indexOf( ']' ) ) );
-				current = current.getChildren( fieldName ).get( index );
+
+				// Check existence before accessing (avoid vivification)
+				if( !current.hasChildren( fieldName ) )
+					return null;
+				ValueVector children = current.getChildren( fieldName );
+				if( index >= children.size() )
+					return null;
+				current = children.get( index );
 			} else {
+				// Check existence before accessing (avoid vivification)
+				if( !current.hasChildren( part ) )
+					return null;
 				current = current.getFirstChild( part );
 			}
 		}

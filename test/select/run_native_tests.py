@@ -23,11 +23,9 @@ run("rm -rf dist && mkdir -p dist/lib dist/javaServices dist/extensions")
 run("cp libjolie/target/libjolie-*.jar dist/lib/libjolie.jar")
 run("cp jolie/target/jolie-*.jar dist/jolie.jar")
 run("cp jolie-cli/target/jolie-cli-*.jar dist/jolie-cli.jar")
-run("cp test/select/antlr4-runtime-4.13.1.jar dist/lib/")
 run("cp javaServices/coreJavaServices/target/coreJavaServices-*.jar dist/javaServices/")
 run("cp extensions/jolie-embedding-legacy/target/jolie-embedding-legacy-*.jar dist/extensions/")
 run("cp launchers/unix/jolie dist/jolie && chmod +x dist/jolie")
-run("sed -i 's/:$JOLIE_HOME\\/lib\\/json-simple.jar:/:$JOLIE_HOME\\/lib\\/json-simple.jar:$JOLIE_HOME\\/lib\\/antlr4-runtime-4.13.1.jar:/' dist/jolie")
 
 # Set up environment for dist/jolie
 jolie_env = os.environ.copy()
@@ -36,17 +34,18 @@ jolie_env['JOLIE_HOME'] = str(project_root / "dist")
 print("Running native SELECT tests...\n")
 
 # Test cases: (filename, [expected output lines])
-# Tests for native SELECT syntax (var.* instead of "$.*")
+# Tests for native SELECT implementation (no ANTLR)
 tests = [
-    ("test_native_wildcard.ol", ["tree.c", "tree.a"]),
-    ("test_native_simple_value.ol", ["data.z", "data.x"]),
-    ("test_native_greater_than.ol", ["items.c", "items.b"]),
-    ("test_native_string_match.ol", ["fruits.c", "fruits.a"]),
-    ("test_native_not_equal.ol", ["vals.c", "vals.a"]),
+    ("test_native_wildcard.ol", ["tree.a", "tree.c"]),
+    ("test_native_simple_value.ol", ["data.x", "data.z"]),
+    ("test_native_greater_than.ol", ["items.b", "items.c"]),
+    ("test_native_string_match.ol", ["fruits.a", "fruits.c"]),
+    ("test_native_not_equal.ol", ["vals.a", "vals.c"]),
     ("test_select_single.ol", ["myvar"]),
     ("test_select_single_no_match.ol", []),
-    ("test_dollar_field.ol", ["tree.c", "tree.b"]),
+    ("test_dollar_field.ol", ["tree.b", "tree.c"]),
     ("test_dollar_nested_field.ol", ["items.c"]),
+    ("test_grandchildren.ol", ["tree.a.x", "tree.a.y", "tree.b.z"]),
 ]
 
 # Run tests

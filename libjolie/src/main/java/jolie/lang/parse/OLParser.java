@@ -2512,7 +2512,7 @@ public class OLParser extends AbstractParser {
 		case SELECT:
 			nextToken();
 
-			// Native syntax: select var where ... OR select var.* where ...
+			// Native syntax: select var where ... OR select var.* where ... OR select var.*.* where ...
 			assertIdentifier( "expected variable name after SELECT" );
 			String varId = token.content();
 			nextToken();
@@ -2521,18 +2521,18 @@ public class OLParser extends AbstractParser {
 			VariablePathNode baseVar = new VariablePathNode( getContext(), Type.NORMAL );
 			baseVar.append( new Pair<>( new ConstantStringExpression( getContext(), varId ), null ) );
 
-			boolean isWildcard = false;
+			int wildcardDepth = 0;
 
-			// Check if there's a DOT (for wildcard syntax var.*)
-			if( token.is( Scanner.TokenType.DOT ) ) {
+			// Count wildcard levels (e.g., .* is 1, .*.* is 2)
+			while( token.is( Scanner.TokenType.DOT ) ) {
 				nextToken(); // eat DOT
 
 				// Must be followed by ASTERISK
 				eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT" );
-				isWildcard = true;
+				wildcardDepth++;
 			}
 
-			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, isWildcard );
+			SelectPathNode selectPath = new SelectPathNode( getContext(), baseVar, wildcardDepth );
 
 			eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 
@@ -3717,7 +3717,7 @@ public class OLParser extends AbstractParser {
 			case SELECT:
 				nextToken();
 
-				// Native syntax: select var where ... OR select var.* where ...
+				// Native syntax: select var where ... OR select var.* where ... OR select var.*.* where ...
 				assertIdentifier( "expected variable name after SELECT" );
 				String varIdExpr = token.content();
 				nextToken();
@@ -3726,18 +3726,18 @@ public class OLParser extends AbstractParser {
 				VariablePathNode baseVarExpr = new VariablePathNode( getContext(), Type.NORMAL );
 				baseVarExpr.append( new Pair<>( new ConstantStringExpression( getContext(), varIdExpr ), null ) );
 
-				boolean isWildcardExpr = false;
+				int wildcardDepthExpr = 0;
 
-				// Check if there's a DOT (for wildcard syntax var.*)
-				if( token.is( Scanner.TokenType.DOT ) ) {
+				// Count wildcard levels (e.g., .* is 1, .*.* is 2)
+				while( token.is( Scanner.TokenType.DOT ) ) {
 					nextToken(); // eat DOT
 
 					// Must be followed by ASTERISK
 					eat( Scanner.TokenType.ASTERISK, "expected * after . in SELECT expression" );
-					isWildcardExpr = true;
+					wildcardDepthExpr++;
 				}
 
-				SelectPathNode selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, isWildcardExpr );
+				SelectPathNode selectPathExpr = new SelectPathNode( getContext(), baseVarExpr, wildcardDepthExpr );
 
 				eat( Scanner.TokenType.WHERE, "expected WHERE after SELECT path" );
 

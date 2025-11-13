@@ -1496,7 +1496,7 @@ public class OOITBuilder implements UnitOLVisitor {
 	public void visit( SelectExpressionNode n ) {
 		currExpression = new SelectExpression(
 			buildVariablePath( n.selectPath().baseVariable() ),
-			n.selectPath().isWildcard(),
+			n.selectPath().wildcardDepth(),
 			buildExpression( n.whereExpression() ) );
 	}
 
@@ -1738,7 +1738,7 @@ public class OOITBuilder implements UnitOLVisitor {
 	public void visit( SelectStatement n ) {
 		currProcess = new SelectProcess(
 			buildVariablePath( n.selectPath().baseVariable() ),
-			n.selectPath().isWildcard(),
+			n.selectPath().wildcardDepth(),
 			buildExpression( n.whereExpression() ) );
 	}
 

@@ -4,19 +4,19 @@ import jolie.process.TransformationReason;
 import jolie.runtime.Value;
 import jolie.runtime.ValueVector;
 import jolie.runtime.VariablePath;
-import jolie.runtime.select.SelectQueryExecutor;
+import jolie.runtime.select.NativePathCollector;
 import java.util.List;
 import java.util.ArrayList;
 
 public class SelectExpression implements Expression {
 	private final VariablePath selectPath;
-	private final boolean isWildcard;
+	private final int wildcardDepth;
 	private final Expression whereExpression;
 
-	public SelectExpression( VariablePath selectPath, boolean isWildcard,
+	public SelectExpression( VariablePath selectPath, int wildcardDepth,
 		Expression whereExpression ) {
 		this.selectPath = selectPath;
-		this.isWildcard = isWildcard;
+		this.wildcardDepth = wildcardDepth;
 		this.whereExpression = whereExpression;
 	}
 
@@ -24,7 +24,7 @@ public class SelectExpression implements Expression {
 	public Expression cloneExpression( TransformationReason reason ) {
 		return new SelectExpression(
 			(VariablePath) selectPath.cloneExpression( reason ),
-			isWildcard,
+			wildcardDepth,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -32,17 +32,9 @@ public class SelectExpression implements Expression {
 	public Value evaluate() {
 		String rootPath = extractRootPath( selectPath );
 		ValueVector vec = selectPath.getValueVector();
-		Object source = vec.size() > 1 ? vec : vec.first();
 
-		// Convert native path to ANTLR query string (for now, only wildcard supported)
-		String selectQuery = isWildcard ? "$.*" : "$";
-
-		// Execute SELECT query without WHERE filtering (pass null to match all)
-		List< String > candidatePaths = SelectQueryExecutor.execute(
-			source,
-			selectQuery,
-			null,
-			rootPath );
+		// Use native path collector instead of ANTLR
+		List< String > candidatePaths = NativePathCollector.collectPaths( vec, rootPath, wildcardDepth );
 
 		// Filter candidates using native Jolie WHERE expression
 		List< String > matchingPaths = new ArrayList<>();
@@ -50,6 +42,9 @@ public class SelectExpression implements Expression {
 
 		for( String path : candidatePaths ) {
 			Value candidateValue = getValueAtPath( vec, path, rootPath );
+			if( candidateValue == null )
+				continue; // Path doesn't exist, skip
+
 			if( currentValueExpr != null ) {
 				currentValueExpr.setCurrentNode( candidateValue );
 			}
@@ -111,8 +106,18 @@ public class SelectExpression implements Expression {
 				int bracketPos = part.indexOf( '[' );
 				String fieldName = part.substring( 0, bracketPos );
 				int index = Integer.parseInt( part.substring( bracketPos + 1, part.indexOf( ']' ) ) );
-				current = current.getChildren( fieldName ).get( index );
+
+				// Check existence before accessing (avoid vivification)
+				if( !current.hasChildren( fieldName ) )
+					return null;
+				ValueVector children = current.getChildren( fieldName );
+				if( index >= children.size() )
+					return null;
+				current = children.get( index );
 			} else {
+				// Check existence before accessing (avoid vivification)
+				if( !current.hasChildren( part ) )
+					return null;
 				current = current.getFirstChild( part );
 			}
 		}
