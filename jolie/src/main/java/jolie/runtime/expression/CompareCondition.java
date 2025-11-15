@@ -52,22 +52,22 @@ public class CompareCondition implements Expression {
 
 	@Override
 	public Value evaluate() {
-		// Check if left side has array wildcards (e.g., $.tags[*] == "red")
+		// Check if left side has wildcards (e.g., $.tags[*] == "red" or $.* == 5)
 		if( leftExpression instanceof CurrentValueExpression ) {
 			CurrentValueExpression cvExpr = (CurrentValueExpression) leftExpression;
-			if( cvExpr.hasArrayWildcards() ) {
-				// Special handling: evaluate right side, then check array wildcard
+			if( cvExpr.hasArrayWildcards() || cvExpr.hasFieldWildcards() ) {
+				// Special handling: evaluate right side, then check wildcard
 				Value rightValue = rightExpression.evaluate();
 				boolean matches = cvExpr.evaluateArrayWildcardComparison( rightValue, compareOperator );
 				return Value.create( matches );
 			}
 		}
 
-		// Check if right side has array wildcards (e.g., "red" == $.tags[*])
+		// Check if right side has wildcards (e.g., "red" == $.tags[*] or 5 == $.*)
 		if( rightExpression instanceof CurrentValueExpression ) {
 			CurrentValueExpression cvExpr = (CurrentValueExpression) rightExpression;
-			if( cvExpr.hasArrayWildcards() ) {
-				// Special handling: evaluate left side, then check array wildcard
+			if( cvExpr.hasArrayWildcards() || cvExpr.hasFieldWildcards() ) {
+				// Special handling: evaluate left side, then check wildcard
 				// Flip the operator for right-side wildcards
 				Value leftValue = leftExpression.evaluate();
 				boolean matches =
@@ -76,7 +76,7 @@ public class CompareCondition implements Expression {
 			}
 		}
 
-		// Normal case: no array wildcards
+		// Normal case: no wildcards
 		return Value.create( compareOperator.test( leftExpression.evaluate(), rightExpression.evaluate() ) );
 	}
 

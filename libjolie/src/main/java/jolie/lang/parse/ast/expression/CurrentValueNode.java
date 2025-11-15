@@ -17,19 +17,34 @@ public class CurrentValueNode extends OLSyntaxNode {
 	private final String recursiveField;
 
 	/**
-	 * Component of a field path, potentially with array wildcard. E.g., "tags" with [*] in $.tags[*]
+	 * Component of a field path, potentially with field or array wildcard. Examples: "tags" in $.tags,
+	 * "*" in $.*, "tags[*]" in $.tags[*], "*[*]" in $.*[*]
 	 */
 	public static class FieldPathComponent {
-		private final String fieldName;
+		private final String fieldName; // null if field wildcard
+		private final boolean hasFieldWildcard;
 		private final boolean hasArrayWildcard;
 
+		// Constructor for regular field with optional array wildcard
 		public FieldPathComponent( String fieldName, boolean hasArrayWildcard ) {
 			this.fieldName = fieldName;
+			this.hasFieldWildcard = false;
+			this.hasArrayWildcard = hasArrayWildcard;
+		}
+
+		// Constructor for field wildcard with optional array wildcard
+		public FieldPathComponent( boolean hasFieldWildcard, boolean hasArrayWildcard ) {
+			this.fieldName = null;
+			this.hasFieldWildcard = hasFieldWildcard;
 			this.hasArrayWildcard = hasArrayWildcard;
 		}
 
 		public String fieldName() {
 			return fieldName;
+		}
+
+		public boolean hasFieldWildcard() {
+			return hasFieldWildcard;
 		}
 
 		public boolean hasArrayWildcard() {
@@ -93,6 +108,15 @@ public class CurrentValueNode extends OLSyntaxNode {
 	public boolean hasArrayWildcards() {
 		for( FieldPathComponent comp : fieldPathComponents ) {
 			if( comp.hasArrayWildcard() ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	public boolean hasFieldWildcards() {
+		for( FieldPathComponent comp : fieldPathComponents ) {
+			if( comp.hasFieldWildcard() ) {
 				return true;
 			}
 		}

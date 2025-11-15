@@ -1446,8 +1446,16 @@ public class OOITBuilder implements UnitOLVisitor {
 				new java.util.ArrayList<>();
 			for( jolie.lang.parse.ast.expression.CurrentValueNode.FieldPathComponent astComp : n
 				.fieldPathComponents() ) {
-				runtimePath.add( new jolie.runtime.expression.CurrentValueExpression.FieldPathComponent(
-					astComp.fieldName(), astComp.hasArrayWildcard() ) );
+				// Check if this is a field wildcard or regular field
+				if( astComp.hasFieldWildcard() ) {
+					// Field wildcard: use constructor with boolean flags
+					runtimePath.add( new jolie.runtime.expression.CurrentValueExpression.FieldPathComponent(
+						astComp.hasFieldWildcard(), astComp.hasArrayWildcard() ) );
+				} else {
+					// Regular field: use constructor with field name
+					runtimePath.add( new jolie.runtime.expression.CurrentValueExpression.FieldPathComponent(
+						astComp.fieldName(), astComp.hasArrayWildcard() ) );
+				}
 			}
 			currExpression = new jolie.runtime.expression.CurrentValueExpression( runtimePath, true );
 		}

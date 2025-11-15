@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-import subprocess, sys, pathlib
+import subprocess, sys, pathlib, concurrent.futures
 
 root = pathlib.Path(__file__).parent.parent.parent
 run = lambda cmd: subprocess.run(cmd, shell=True, capture_output=True, text=True, cwd=root)
@@ -63,13 +63,32 @@ tests = [
     ("test_where_array_wildcard_mixed_types.ol", ["data.records[0]", "data.records[2]"]),
     ("test_where_array_wildcard_deep_nesting.ol", ["data.orgs[0]", "data.orgs[1]"]),
     ("test_where_array_wildcard_combined_path_and_where.ol", ["data.items[0]", "data.items[2]"]),
+    # Field wildcard in WHERE clause
+    ("test_where_field_wildcard_basic.ol", ["data"]),
+    ("test_where_field_wildcard_greater_than.ol", ["tree"]),
+    ("test_where_field_wildcard_multi_level.ol", ["root"]),
+    ("test_where_field_wildcard_with_field.ol", ["data"]),
+    ("test_where_field_wildcard_string.ol", ["colors"]),
+    ("test_where_field_wildcard_negation.ol", []),
+    ("test_where_field_wildcard_nested.ol", ["store.items[2]"]),
+    ("test_where_field_wildcard_boolean_and.ol", ["item"]),
+    ("test_where_field_wildcard_deep.ol", ["root"]),
 ]
 
-passed = 0
-for test, expected in tests:
+def run_test(test_tuple):
+    test, expected = test_tuple
     out = run(f"JOLIE_HOME={root}/dist/jolie {root}/dist/launchers/unix/jolie test/select/{test}").stdout
     result = [line.strip() for line in out.strip().split('\n') if line.strip()]
     ok = result == expected
+    return (test, expected, result, ok)
+
+# Run tests concurrently
+with concurrent.futures.ThreadPoolExecutor() as executor:
+    results = list(executor.map(run_test, tests))
+
+# Print results
+passed = 0
+for test, expected, result, ok in results:
     print(f"{'✓' if ok else '✗'} {test}")
     if not ok: print(f"  Expected: {expected}\n  Got: {result}")
     passed += ok

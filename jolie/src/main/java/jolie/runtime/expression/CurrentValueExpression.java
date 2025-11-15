@@ -17,19 +17,34 @@ public class CurrentValueExpression implements Expression {
 	private final String recursiveField;
 
 	/**
-	 * Component of a field path, potentially with array wildcard. E.g., "tags" with [*] in $.tags[*]
+	 * Component of a field path, potentially with field or array wildcard. Examples: "tags" in $.tags,
+	 * "*" in $.*, "tags[*]" in $.tags[*], "*[*]" in $.*[*]
 	 */
 	public static class FieldPathComponent {
-		private final String fieldName;
+		private final String fieldName; // null if field wildcard
+		private final boolean hasFieldWildcard;
 		private final boolean hasArrayWildcard;
 
+		// Constructor for regular field with optional array wildcard
 		public FieldPathComponent( String fieldName, boolean hasArrayWildcard ) {
 			this.fieldName = fieldName;
+			this.hasFieldWildcard = false;
+			this.hasArrayWildcard = hasArrayWildcard;
+		}
+
+		// Constructor for field wildcard with optional array wildcard
+		public FieldPathComponent( boolean hasFieldWildcard, boolean hasArrayWildcard ) {
+			this.fieldName = null;
+			this.hasFieldWildcard = hasFieldWildcard;
 			this.hasArrayWildcard = hasArrayWildcard;
 		}
 
 		public String fieldName() {
 			return fieldName;
+		}
+
+		public boolean hasFieldWildcard() {
+			return hasFieldWildcard;
 		}
 
 		public boolean hasArrayWildcard() {
@@ -89,35 +104,35 @@ public class CurrentValueExpression implements Expression {
 		if( fieldPathComponents.isEmpty() )
 			return currentNode;
 
-		// Check if any field has array wildcard
-		boolean hasArrayWildcard = false;
+		// Check if any field has array or field wildcard
+		boolean hasWildcard = false;
 		for( FieldPathComponent comp : fieldPathComponents ) {
-			if( comp.hasArrayWildcard() ) {
-				hasArrayWildcard = true;
+			if( comp.hasArrayWildcard() || comp.hasFieldWildcard() ) {
+				hasWildcard = true;
 				break;
 			}
 		}
 
-		if( !hasArrayWildcard ) {
-			// Simple case: no array wildcards, just navigate
+		if( !hasWildcard ) {
+			// Simple case: no wildcards, just navigate
 			return navigateFieldPath( currentNode, fieldPathComponents );
 		} else {
-			// Complex case: has array wildcards
+			// Complex case: has wildcards
 			// This shouldn't be called directly in comparisons
 			throw new IllegalStateException(
-				"Cannot evaluate $.field[*] directly; use evaluateArrayWildcardComparison()" );
+				"Cannot evaluate $.field[*] or $.* directly; use evaluateWildcardComparison()" );
 		}
 	}
 
 	/**
-	 * Navigate through field path without array wildcards. Uses getFirstChild() for each field.
+	 * Navigate through field path without wildcards. Uses getFirstChild() for each field.
 	 */
 	private Value navigateFieldPath( Value start, List< FieldPathComponent > path ) {
 		Value result = start;
 		for( FieldPathComponent component : path ) {
-			if( component.hasArrayWildcard() ) {
+			if( component.hasArrayWildcard() || component.hasFieldWildcard() ) {
 				// This shouldn't happen in simple navigation
-				throw new IllegalStateException( "Array wildcard in simple navigation" );
+				throw new IllegalStateException( "Wildcard in simple navigation" );
 			}
 			result = result.getFirstChild( component.fieldName() );
 		}
@@ -130,6 +145,18 @@ public class CurrentValueExpression implements Expression {
 	public boolean hasArrayWildcards() {
 		for( FieldPathComponent comp : fieldPathComponents ) {
 			if( comp.hasArrayWildcard() ) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Check if this expression has field wildcards.
+	 */
+	public boolean hasFieldWildcards() {
+		for( FieldPathComponent comp : fieldPathComponents ) {
+			if( comp.hasFieldWildcard() ) {
 				return true;
 			}
 		}
@@ -153,7 +180,7 @@ public class CurrentValueExpression implements Expression {
 	}
 
 	/**
-	 * Recursively check if any path through array wildcards satisfies the condition.
+	 * Recursively check if any path through wildcards satisfies the condition.
 	 *
 	 * @param current Current value node
 	 * @param path Remaining field path components
@@ -170,6 +197,40 @@ public class CurrentValueExpression implements Expression {
 		}
 
 		FieldPathComponent component = path.get( index );
+
+		// Handle field wildcard: iterate over all child fields
+		if( component.hasFieldWildcard() ) {
+			// Iterate over all child fields of current node
+			for( java.util.Map.Entry< String, ValueVector > entry : current.children().entrySet() ) {
+				String childFieldName = entry.getKey();
+				ValueVector childVector = entry.getValue();
+
+				if( component.hasArrayWildcard() ) {
+					// Field wildcard + array wildcard: $.*[*]
+					// Iterate over all elements in this field's array
+					for( int i = 0; i < childVector.size(); i++ ) {
+						Value element = childVector.get( i );
+						if( checkPathWithWildcard( element, path, index + 1, comparisonValue, operator ) ) {
+							return true; // Found a match!
+						}
+					}
+				} else {
+					// Just field wildcard: $.*
+					// Navigate to first element of this field
+					if( childVector.size() > 0 ) {
+						Value childValue = childVector.first();
+						if( checkPathWithWildcard( childValue, path, index + 1, comparisonValue, operator ) ) {
+							return true; // Found a match!
+						}
+					}
+				}
+			}
+
+			// No field matched
+			return false;
+		}
+
+		// Handle regular field name (with or without array wildcard)
 		String fieldName = component.fieldName();
 
 		// Check if field exists (prevent vivification)
@@ -178,11 +239,11 @@ public class CurrentValueExpression implements Expression {
 		}
 
 		if( !component.hasArrayWildcard() ) {
-			// No wildcard: just navigate to first child
+			// No array wildcard: just navigate to first child
 			Value next = current.getFirstChild( fieldName );
 			return checkPathWithWildcard( next, path, index + 1, comparisonValue, operator );
 		} else {
-			// Has wildcard: check ALL elements in the array
+			// Has array wildcard: check ALL elements in the array
 			ValueVector children = current.getChildren( fieldName );
 
 			// Existential quantification: return true if ANY element matches

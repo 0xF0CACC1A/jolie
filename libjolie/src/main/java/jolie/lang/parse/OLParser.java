@@ -3673,32 +3673,31 @@ public class OLParser extends AbstractParser {
 						nextToken(); // eat field name
 						retVal = new CurrentValueNode( getContext(), recursiveFieldName );
 					} else {
-						// Regular field path: $.field or $.field.subfield or $.field[*]
+						// Regular field path: $.field or $.field.subfield or $.field[*] or $.*
 						List< CurrentValueNode.FieldPathComponent > fieldPath = new ArrayList<>();
-						assertIdentifier( "expected field name after . in $ expression" );
-						String fieldName = token.content();
-						nextToken(); // eat field name
 
-						// Check for array wildcard [*]
-						boolean hasArrayWildcard = false;
-						if( token.is( Scanner.TokenType.LSQUARE ) ) {
-							nextToken(); // eat [
-							eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ array wildcard" );
-							eat( Scanner.TokenType.RSQUARE, "expected ] after * in $ array wildcard" );
-							hasArrayWildcard = true;
-						}
+						// Check for field wildcard: $.*
+						if( token.is( Scanner.TokenType.ASTERISK ) ) {
+							nextToken(); // eat ASTERISK
 
-						fieldPath.add( new CurrentValueNode.FieldPathComponent( fieldName, hasArrayWildcard ) );
+							// Check for array wildcard after field wildcard: $.*[*]
+							boolean hasArrayWildcard = false;
+							if( token.is( Scanner.TokenType.LSQUARE ) ) {
+								nextToken(); // eat [
+								eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ wildcard" );
+								eat( Scanner.TokenType.RSQUARE, "expected ] after [* in $ wildcard" );
+								hasArrayWildcard = true;
+							}
 
-						// Parse additional fields ($.field.subfield or $.field[*].subfield)
-						while( token.is( Scanner.TokenType.DOT ) ) {
-							nextToken(); // eat DOT
-							assertIdentifier( "expected field name after . in $ expression" );
-							fieldName = token.content();
+							fieldPath.add( new CurrentValueNode.FieldPathComponent( true, hasArrayWildcard ) );
+						} else {
+							// Regular field name
+							assertIdentifier( "expected field name or * after . in $ expression" );
+							String fieldName = token.content();
 							nextToken(); // eat field name
 
 							// Check for array wildcard [*]
-							hasArrayWildcard = false;
+							boolean hasArrayWildcard = false;
 							if( token.is( Scanner.TokenType.LSQUARE ) ) {
 								nextToken(); // eat [
 								eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ array wildcard" );
@@ -3707,6 +3706,43 @@ public class OLParser extends AbstractParser {
 							}
 
 							fieldPath.add( new CurrentValueNode.FieldPathComponent( fieldName, hasArrayWildcard ) );
+						}
+
+						// Parse additional fields ($.field.subfield or $.field[*].subfield or $.*.* or $.*[*].*)
+						while( token.is( Scanner.TokenType.DOT ) ) {
+							nextToken(); // eat DOT
+
+							// Check for field wildcard: $.*.*
+							if( token.is( Scanner.TokenType.ASTERISK ) ) {
+								nextToken(); // eat ASTERISK
+
+								// Check for array wildcard after field wildcard: $.*.*[*]
+								boolean arrayWildcard = false;
+								if( token.is( Scanner.TokenType.LSQUARE ) ) {
+									nextToken(); // eat [
+									eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ wildcard" );
+									eat( Scanner.TokenType.RSQUARE, "expected ] after [* in $ wildcard" );
+									arrayWildcard = true;
+								}
+
+								fieldPath.add( new CurrentValueNode.FieldPathComponent( true, arrayWildcard ) );
+							} else {
+								// Regular field name
+								assertIdentifier( "expected field name or * after . in $ expression" );
+								String fname = token.content();
+								nextToken(); // eat field name
+
+								// Check for array wildcard [*]
+								boolean arrayWildcard = false;
+								if( token.is( Scanner.TokenType.LSQUARE ) ) {
+									nextToken(); // eat [
+									eat( Scanner.TokenType.ASTERISK, "expected * after [ in $ array wildcard" );
+									eat( Scanner.TokenType.RSQUARE, "expected ] after * in $ array wildcard" );
+									arrayWildcard = true;
+								}
+
+								fieldPath.add( new CurrentValueNode.FieldPathComponent( fname, arrayWildcard ) );
+							}
 						}
 
 						retVal = new CurrentValueNode( getContext(), fieldPath, true );
