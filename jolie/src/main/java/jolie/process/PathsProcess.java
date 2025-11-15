@@ -56,7 +56,11 @@ public class PathsProcess implements Process {
 
 		// Use native path collector
 		List< String > candidatePaths;
-		if( arrayWildcardPath != null ) {
+		if( arrayWildcardPath != null && wildcardDepth > 0 ) {
+			// Combined wildcard + array: var.*[*], var.*.*[*]
+			// arrayWildcardPath is "" (empty string) to signal this combination
+			candidatePaths = NativePathCollector.collectWildcardArrayPaths( vec, rootPath, wildcardDepth );
+		} else if( arrayWildcardPath != null ) {
 			// Array wildcard: data[*] or tree.items[*]
 			candidatePaths = NativePathCollector.collectArrayPaths( vec, rootPath, arrayWildcardPath );
 		} else if( recursiveField != null ) {

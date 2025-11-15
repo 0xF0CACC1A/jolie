@@ -2553,6 +2553,16 @@ public class OLParser extends AbstractParser {
 						eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS" );
 						wildcardDepth++;
 					}
+
+					// Check for array wildcard after wildcard: .*[*] or .*.*[*]
+					if( token.is( Scanner.TokenType.LSQUARE ) ) {
+						// Combined wildcard + array wildcard syntax
+						nextToken(); // eat LSQUARE
+						eat( Scanner.TokenType.ASTERISK, "expected * after [ in PATHS" );
+						eat( Scanner.TokenType.RSQUARE, "expected ] after [* in PATHS" );
+						// Use empty string to signal: wildcard depth N + array expansion
+						arrayWildcardPath = "";
+					}
 				} else {
 					// Field path leading to array wildcard: .field[*] or .field.subfield[*]
 					StringBuilder fieldPath = new StringBuilder();
@@ -3850,6 +3860,16 @@ public class OLParser extends AbstractParser {
 							nextToken(); // eat DOT
 							eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS expression" );
 							wildcardDepthExpr++;
+						}
+
+						// Check for array wildcard after wildcard: .*[*] or .*.*[*]
+						if( token.is( Scanner.TokenType.LSQUARE ) ) {
+							// Combined wildcard + array wildcard syntax
+							nextToken(); // eat LSQUARE
+							eat( Scanner.TokenType.ASTERISK, "expected * after [ in PATHS expression" );
+							eat( Scanner.TokenType.RSQUARE, "expected ] after [* in PATHS expression" );
+							// Use empty string to signal: wildcard depth N + array expansion
+							arrayWildcardPathExpr = "";
 						}
 					} else {
 						// Field path leading to array wildcard: .field[*] or .field.subfield[*]

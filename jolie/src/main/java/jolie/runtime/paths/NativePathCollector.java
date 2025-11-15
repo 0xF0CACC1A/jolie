@@ -109,6 +109,93 @@ public class NativePathCollector {
 		return paths;
 	}
 
+	/**
+	 * Collect array element paths by combining wildcard depth traversal with array expansion. This
+	 * handles syntax like var.*[*] (all arrays in children) or var.*.*[*] (all arrays in
+	 * grandchildren).
+	 *
+	 * @param vec ValueVector to start from (the base variable's vector)
+	 * @param rootPath Base path (e.g., "tree")
+	 * @param wildcardDepth How many wildcard levels before array expansion
+	 * @return List of paths like "tree.a[0]", "tree.a[1]", "tree.b[0]", "tree.b[1]"
+	 */
+	public static List< String > collectWildcardArrayPaths( ValueVector vec, String rootPath,
+		int wildcardDepth ) {
+		List< String > paths = new ArrayList<>();
+
+		// Step 1: Get all paths at the wildcard depth using existing method
+		// For tree.*, this gives: ["tree.a", "tree.b", "tree.c"]
+		// For tree.*.*, this gives: ["tree.a.x", "tree.a.y", "tree.b.z"]
+		List< String > wildcardPaths = collectPaths( vec, rootPath, wildcardDepth );
+
+		// Step 2: For each wildcard path, enumerate array elements if it's an array
+		// This is fully iterative - no recursion
+		for( String wildcardPath : wildcardPaths ) {
+			// Navigate to the value at this path iteratively (with vivification prevention)
+			ValueVector targetVector = navigateToPath( vec, wildcardPath, rootPath );
+
+			// If navigation succeeded (path exists), enumerate array indices
+			if( targetVector != null && targetVector.size() > 0 ) {
+				// The targetVector is the array we want to expand
+				for( int i = 0; i < targetVector.size(); i++ ) {
+					String arrayPath = wildcardPath + "[" + i + "]";
+					paths.add( arrayPath );
+				}
+			}
+		}
+
+		return paths;
+	}
+
+	/**
+	 * Navigate to a specific path iteratively, with vivification prevention. Returns null if the path
+	 * doesn't exist.
+	 *
+	 * @param baseVec Starting ValueVector
+	 * @param fullPath Full path to navigate to (e.g., "tree.a" or "tree.a.x")
+	 * @param rootPath Root portion of the path (e.g., "tree")
+	 * @return ValueVector at the target path, or null if path doesn't exist
+	 */
+	private static ValueVector navigateToPath( ValueVector baseVec, String fullPath, String rootPath ) {
+		// If fullPath equals rootPath, we're already at the target
+		if( fullPath.equals( rootPath ) ) {
+			return baseVec;
+		}
+
+		// Extract the relative path after rootPath
+		// fullPath = "tree.a.x", rootPath = "tree" → relativePath = "a.x"
+		String relativePath;
+		if( fullPath.startsWith( rootPath + "." ) ) {
+			relativePath = fullPath.substring( rootPath.length() + 1 );
+		} else {
+			// Path doesn't start with rootPath - shouldn't happen, but handle gracefully
+			return null;
+		}
+
+		// Navigate iteratively through the path parts
+		Value current = baseVec.first();
+		String[] pathParts = relativePath.split( "\\." );
+
+		for( String part : pathParts ) {
+			// Check existence before accessing (vivification prevention)
+			if( !current.hasChildren( part ) ) {
+				// Path doesn't exist
+				return null;
+			}
+			// For the last part, we want to return the ValueVector, not navigate into it
+			if( part.equals( pathParts[ pathParts.length - 1 ] ) ) {
+				// This is the target - return its ValueVector
+				return current.getChildren( part );
+			} else {
+				// Navigate to next level
+				current = current.getFirstChild( part );
+			}
+		}
+
+		// Shouldn't reach here, but return null if we do
+		return null;
+	}
+
 	private static void collectPathsRecursive( Value node, String currentPath, int remainingDepth,
 		List< String > paths ) {
 		if( remainingDepth == 0 ) {

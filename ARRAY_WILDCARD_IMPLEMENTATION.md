@@ -434,29 +434,46 @@ private final String arrayWildcardPath;
 
 **Alternative Rejected**: Using a boolean `isBaseArray` flag would require two fields, increasing complexity.
 
-### Out of Scope: var.*[*]
+### Wildcard + Array Combination: var.*[*]
 
-**Not Supported**: `paths data.*[*] where $ > 10`
+**Now Supported!**: `paths data.*[*] where $ > 10`
 
 **Meaning**: Enumerate all array elements of all child fields.
 
 **Example**:
 ```jolie
-data.x[0] = 5;
-data.x[1] = 10;
-data.y[0] = 15;
-data.y[1] = 20;
+tree.a[0] = 5;
+tree.a[1] = 15;
+tree.b[0] = 25;
+tree.b[1] = 35;
 
-// Would return: data.x[0], data.x[1], data.y[0], data.y[1]
-// But only matches where $ > 10: data.x[1], data.y[0], data.y[1]
+res << paths tree.*[*] where $ > 10;
+// Returns: tree.a[1], tree.b[0], tree.b[1]
 ```
 
-**Why Not Included**: Requires additional parser complexity to handle wildcard + array wildcard combination. Left for future work.
+**How It Works**:
+1. Wildcard traversal finds all children: `tree.a`, `tree.b`
+2. Array expansion enumerates elements: `tree.a[0]`, `tree.a[1]`, `tree.b[0]`, `tree.b[1]`
+3. WHERE clause filters based on value
 
-**Also Out of Scope**:
-- `var.*.*[*]` - multi-level wildcard + array
-- `var[*].*` - array elements' children
-- `var..field[*]` - recursive field search + array wildcard
+**Multi-level Support**: `var.*.*[*]` (grandchildren arrays)
+```jolie
+data.x.alpha[0] = 5;
+data.x.alpha[1] = 10;
+data.y.beta[0] = 15;
+
+res << paths data.*.*[*] where $ > 8;
+// Returns: data.x.alpha[1], data.y.beta[0]
+```
+
+**Implementation**:
+- Parser: After wildcard parsing, checks for `[*]` and sets `arrayWildcardPath = ""`
+- Runtime: Calls `NativePathCollector.collectWildcardArrayPaths()`
+- Fully iterative with vivification prevention
+
+**Still Out of Scope**:
+- `var[*].*` - array elements' children (would need different design)
+- `var..field[*]` - recursive field search + array wildcard (complexity)
 
 ---
 
