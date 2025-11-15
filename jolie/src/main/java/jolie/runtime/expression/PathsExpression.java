@@ -14,30 +14,39 @@ public class PathsExpression implements Expression {
 	private final String recursiveField;
 	private final String arrayWildcardPath;
 	private final int wildcardDepthAfterArray;
+	private final boolean recursiveFieldIsArray;
 	private final Expression whereExpression;
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth,
 		Expression whereExpression ) {
-		this( pathSpec, wildcardDepth, null, null, 0, whereExpression );
+		this( pathSpec, wildcardDepth, null, null, 0, false, whereExpression );
 	}
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		Expression whereExpression ) {
-		this( pathSpec, wildcardDepth, recursiveField, null, 0, whereExpression );
+		this( pathSpec, wildcardDepth, recursiveField, null, 0, false, whereExpression );
 	}
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		String arrayWildcardPath, Expression whereExpression ) {
-		this( pathSpec, wildcardDepth, recursiveField, arrayWildcardPath, 0, whereExpression );
+		this( pathSpec, wildcardDepth, recursiveField, arrayWildcardPath, 0, false, whereExpression );
 	}
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		String arrayWildcardPath, int wildcardDepthAfterArray, Expression whereExpression ) {
+		this( pathSpec, wildcardDepth, recursiveField, arrayWildcardPath, wildcardDepthAfterArray, false,
+			whereExpression );
+	}
+
+	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
+		String arrayWildcardPath, int wildcardDepthAfterArray, boolean recursiveFieldIsArray,
+		Expression whereExpression ) {
 		this.pathSpec = pathSpec;
 		this.wildcardDepth = wildcardDepth;
 		this.recursiveField = recursiveField;
 		this.arrayWildcardPath = arrayWildcardPath;
 		this.wildcardDepthAfterArray = wildcardDepthAfterArray;
+		this.recursiveFieldIsArray = recursiveFieldIsArray;
 		this.whereExpression = whereExpression;
 	}
 
@@ -49,6 +58,7 @@ public class PathsExpression implements Expression {
 			recursiveField,
 			arrayWildcardPath,
 			wildcardDepthAfterArray,
+			recursiveFieldIsArray,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -71,6 +81,10 @@ public class PathsExpression implements Expression {
 		} else if( arrayWildcardPath != null ) {
 			// Array wildcard: data[*] or tree.items[*]
 			candidatePaths = NativePathCollector.collectArrayPaths( vec, rootPath, arrayWildcardPath );
+		} else if( recursiveField != null && recursiveFieldIsArray ) {
+			// Recursive field with array wildcard: var..field[*]
+			candidatePaths =
+				NativePathCollector.collectRecursiveArrayPaths( vec, rootPath, recursiveField );
 		} else if( recursiveField != null ) {
 			// Recursive field search: var..field
 			candidatePaths = NativePathCollector.collectPathsRecursive( vec, rootPath, recursiveField );

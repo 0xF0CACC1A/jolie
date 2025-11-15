@@ -50,6 +50,23 @@ public class NativePathCollector {
 	}
 
 	/**
+	 * Collect all array element paths for a recursively found field with array wildcard. This handles
+	 * syntax like var..field[*] where we find all occurrences of 'field' recursively, and for each one
+	 * that is an array, enumerate all its elements.
+	 *
+	 * @param vec ValueVector to traverse
+	 * @param rootPath Base path (e.g., "data")
+	 * @param targetField Field name to search for recursively (e.g., "name")
+	 * @return List of paths like "data.name[0]", "data.name[1]", "data.nested.name[0]"
+	 */
+	public static List< String > collectRecursiveArrayPaths( ValueVector vec, String rootPath,
+		String targetField ) {
+		List< String > paths = new ArrayList<>();
+		collectRecursiveArrayPathsHelper( vec.first(), rootPath, targetField, paths );
+		return paths;
+	}
+
+	/**
 	 * Collect all array element paths for a given field path using array wildcard [*].
 	 *
 	 * @param vec ValueVector to start from (the base variable's vector)
@@ -271,6 +288,39 @@ public class NativePathCollector {
 					// If this field matches target, add its path
 					if( fieldName.equals( targetField ) ) {
 						paths.add( childPath );
+					}
+
+					// Push child onto stack to continue searching
+					stack.push( new java.util.AbstractMap.SimpleEntry<>( child, childPath ) );
+				}
+			} );
+		}
+	}
+
+	private static void collectRecursiveArrayPathsHelper( Value node, String currentPath, String targetField,
+		List< String > paths ) {
+		// Stack-based iterative DFS to avoid recursion
+		java.util.Stack< java.util.Map.Entry< Value, String > > stack = new java.util.Stack<>();
+		stack.push( new java.util.AbstractMap.SimpleEntry<>( node, currentPath ) );
+
+		while( !stack.isEmpty() ) {
+			java.util.Map.Entry< Value, String > entry = stack.pop();
+			Value current = entry.getKey();
+			String path = entry.getValue();
+
+			// Check all children of current node
+			current.children().forEach( ( fieldName, childVector ) -> {
+				if( !childVector.isEmpty() ) {
+					Value child = childVector.first();
+					String childPath = path.isEmpty() ? fieldName : path + "." + fieldName;
+
+					// If this field matches target and is an array, enumerate all elements
+					if( fieldName.equals( targetField ) ) {
+						// Check if it's an array (ValueVector with multiple indices)
+						for( int i = 0; i < childVector.size(); i++ ) {
+							String arrayElementPath = childPath + "[" + i + "]";
+							paths.add( arrayElementPath );
+						}
 					}
 
 					// Push child onto stack to continue searching

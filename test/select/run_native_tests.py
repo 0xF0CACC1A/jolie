@@ -93,6 +93,11 @@ tests = [
     ("test_array_field_wildcard_inequality.ol", ["data[0].min", "data[1].min"]),
     ("test_array_field_wildcard_empty.ol", ["Result count: 0"]),
     ("test_array_field_wildcard_multi_level_filter.ol", ["data[0].a.y", "data[1].a.x"]),
+    # Recursive descent + array wildcard in PATHS path: ..field[*]
+    ("test_recursive_array_basic.ol", ["data.items[0]", "data.items[1]", "data.nested.items[0]", "data.nested.items[1]", "data.nested.deep.items[0]"]),
+    ("test_recursive_array_filter.ol", ["data.values[2]", "data.nested.values[1]", "data.nested.deep.values[0]"]),
+    ("test_recursive_array_string.ol", ["data.users[1]", "data.nested.users[1]"]),
+    ("test_recursive_array_empty.ol", ["Result count: 0"]),
 ]
 
 def run_test(test_tuple):

@@ -810,7 +810,8 @@ public class OLParseTreeOptimizer {
 				n.wildcardDepth(),
 				n.recursiveField(),
 				n.arrayWildcardPath(),
-				n.wildcardDepthAfterArray() );
+				n.wildcardDepthAfterArray(),
+				n.recursiveFieldIsArray() );
 		}
 
 		@Override
