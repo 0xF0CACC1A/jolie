@@ -13,24 +13,31 @@ public class PathsExpression implements Expression {
 	private final int wildcardDepth;
 	private final String recursiveField;
 	private final String arrayWildcardPath;
+	private final int wildcardDepthAfterArray;
 	private final Expression whereExpression;
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth,
 		Expression whereExpression ) {
-		this( pathSpec, wildcardDepth, null, null, whereExpression );
+		this( pathSpec, wildcardDepth, null, null, 0, whereExpression );
 	}
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		Expression whereExpression ) {
-		this( pathSpec, wildcardDepth, recursiveField, null, whereExpression );
+		this( pathSpec, wildcardDepth, recursiveField, null, 0, whereExpression );
 	}
 
 	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
 		String arrayWildcardPath, Expression whereExpression ) {
+		this( pathSpec, wildcardDepth, recursiveField, arrayWildcardPath, 0, whereExpression );
+	}
+
+	public PathsExpression( VariablePath pathSpec, int wildcardDepth, String recursiveField,
+		String arrayWildcardPath, int wildcardDepthAfterArray, Expression whereExpression ) {
 		this.pathSpec = pathSpec;
 		this.wildcardDepth = wildcardDepth;
 		this.recursiveField = recursiveField;
 		this.arrayWildcardPath = arrayWildcardPath;
+		this.wildcardDepthAfterArray = wildcardDepthAfterArray;
 		this.whereExpression = whereExpression;
 	}
 
@@ -41,6 +48,7 @@ public class PathsExpression implements Expression {
 			wildcardDepth,
 			recursiveField,
 			arrayWildcardPath,
+			wildcardDepthAfterArray,
 			whereExpression.cloneExpression( reason ) );
 	}
 
@@ -55,6 +63,11 @@ public class PathsExpression implements Expression {
 			// Combined wildcard + array: var.*[*], var.*.*[*]
 			// arrayWildcardPath is "" (empty string) to signal this combination
 			candidatePaths = NativePathCollector.collectWildcardArrayPaths( vec, rootPath, wildcardDepth );
+		} else if( arrayWildcardPath != null && wildcardDepthAfterArray > 0 ) {
+			// Array wildcard followed by field wildcard: var[*].*, var[*].*.*
+			// arrayWildcardPath is "" (base variable array)
+			candidatePaths =
+				NativePathCollector.collectArrayWildcardPaths( vec, rootPath, wildcardDepthAfterArray );
 		} else if( arrayWildcardPath != null ) {
 			// Array wildcard: data[*] or tree.items[*]
 			candidatePaths = NativePathCollector.collectArrayPaths( vec, rootPath, arrayWildcardPath );
@@ -151,10 +164,25 @@ public class PathsExpression implements Expression {
 
 		// Special case: if relativePath starts with [, it's a direct array access on vec
 		if( relativePath.startsWith( "[" ) ) {
-			int index = Integer.parseInt( relativePath.substring( 1, relativePath.indexOf( ']' ) ) );
+			int closeBracket = relativePath.indexOf( ']' );
+			int index = Integer.parseInt( relativePath.substring( 1, closeBracket ) );
 			if( index >= vec.size() )
 				return null;
-			return vec.get( index );
+			current = vec.get( index );
+
+			// Check if there's more path after the array index
+			if( closeBracket + 1 < relativePath.length() ) {
+				// There's more - extract it (skip the dot if present)
+				String remaining = relativePath.substring( closeBracket + 1 );
+				if( remaining.startsWith( "." ) ) {
+					remaining = remaining.substring( 1 );
+				}
+				// Continue navigation with the remaining path
+				relativePath = remaining;
+			} else {
+				// No more path - return the array element
+				return current;
+			}
 		}
 
 		String[] parts = relativePath.split( "\\." );

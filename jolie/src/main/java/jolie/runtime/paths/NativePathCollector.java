@@ -148,6 +148,41 @@ public class NativePathCollector {
 	}
 
 	/**
+	 * Collect paths by first expanding array elements, then collecting wildcard paths for each element.
+	 * This handles syntax like var[*].* (all children of all array elements) or var[*].*.* (all
+	 * grandchildren of all array elements).
+	 *
+	 * @param vec ValueVector to start from (the base variable's array vector)
+	 * @param rootPath Base path (e.g., "data")
+	 * @param wildcardDepth How many wildcard levels after array expansion
+	 * @return List of paths like "data[0].x", "data[0].y", "data[1].x", "data[1].y"
+	 */
+	public static List< String > collectArrayWildcardPaths( ValueVector vec, String rootPath,
+		int wildcardDepth ) {
+		List< String > paths = new ArrayList<>();
+
+		// Step 1: Iterate through all array elements of the base variable
+		// This is fully iterative - no recursion
+		for( int i = 0; i < vec.size(); i++ ) {
+			String arrayElementPath = rootPath + "[" + i + "]";
+
+			// Step 2: For each array element, collect paths at wildcard depth
+			if( wildcardDepth == 0 ) {
+				// No wildcard after array: just return array element paths
+				paths.add( arrayElementPath );
+			} else {
+				// Wildcard after array: collect paths from this array element
+				Value arrayElement = vec.get( i );
+
+				// Collect paths at wildcard depth from this element
+				collectPathsRecursive( arrayElement, arrayElementPath, wildcardDepth, paths );
+			}
+		}
+
+		return paths;
+	}
+
+	/**
 	 * Navigate to a specific path iteratively, with vivification prevention. Returns null if the path
 	 * doesn't exist.
 	 *

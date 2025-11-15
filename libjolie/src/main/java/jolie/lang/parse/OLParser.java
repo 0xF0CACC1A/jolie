@@ -2525,6 +2525,7 @@ public class OLParser extends AbstractParser {
 			int wildcardDepth = 0;
 			String recursiveField = null;
 			String arrayWildcardPath = null;
+			int wildcardDepthAfterArray = 0;
 
 			// Check for array wildcard on base variable: var[*]
 			if( token.is( Scanner.TokenType.LSQUARE ) ) {
@@ -2532,6 +2533,20 @@ public class OLParser extends AbstractParser {
 				eat( Scanner.TokenType.ASTERISK, "expected * after [ in PATHS" );
 				eat( Scanner.TokenType.RSQUARE, "expected ] after [* in PATHS" );
 				arrayWildcardPath = ""; // Empty string means base variable array
+
+				// Check for wildcard after array: [*].*
+				if( token.is( Scanner.TokenType.DOT ) ) {
+					nextToken(); // eat DOT
+					eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS" );
+					wildcardDepthAfterArray++;
+
+					// Count additional wildcard levels: [*].*.* etc
+					while( token.is( Scanner.TokenType.DOT ) ) {
+						nextToken(); // eat DOT
+						eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS" );
+						wildcardDepthAfterArray++;
+					}
+				}
 			}
 			// Check for wildcards (.*, .*.*) or recursive descent (..field) or field path (.field[*])
 			else if( token.is( Scanner.TokenType.DOT ) ) {
@@ -2593,7 +2608,8 @@ public class OLParser extends AbstractParser {
 			}
 
 			PathSpecNode pathSpec =
-				new PathSpecNode( getContext(), baseVar, wildcardDepth, recursiveField, arrayWildcardPath );
+				new PathSpecNode( getContext(), baseVar, wildcardDepth, recursiveField, arrayWildcardPath,
+					wildcardDepthAfterArray );
 
 			eat( Scanner.TokenType.WHERE, "expected WHERE after PATHS path" );
 
@@ -3869,6 +3885,7 @@ public class OLParser extends AbstractParser {
 				int wildcardDepthExpr = 0;
 				String recursiveFieldExpr = null;
 				String arrayWildcardPathExpr = null;
+				int wildcardDepthAfterArrayExpr = 0;
 
 				// Check for array wildcard on base variable: var[*]
 				if( token.is( Scanner.TokenType.LSQUARE ) ) {
@@ -3876,6 +3893,20 @@ public class OLParser extends AbstractParser {
 					eat( Scanner.TokenType.ASTERISK, "expected * after [ in PATHS expression" );
 					eat( Scanner.TokenType.RSQUARE, "expected ] after [* in PATHS expression" );
 					arrayWildcardPathExpr = ""; // Empty string means base variable array
+
+					// Check for wildcard after array: [*].*
+					if( token.is( Scanner.TokenType.DOT ) ) {
+						nextToken(); // eat DOT
+						eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS expression" );
+						wildcardDepthAfterArrayExpr++;
+
+						// Count additional wildcard levels: [*].*.* etc
+						while( token.is( Scanner.TokenType.DOT ) ) {
+							nextToken(); // eat DOT
+							eat( Scanner.TokenType.ASTERISK, "expected * after . in PATHS expression" );
+							wildcardDepthAfterArrayExpr++;
+						}
+					}
 				}
 				// Check for wildcards (.*, .*.*) or recursive descent (..field) or field path (.field[*])
 				else if( token.is( Scanner.TokenType.DOT ) ) {
@@ -3937,7 +3968,7 @@ public class OLParser extends AbstractParser {
 				}
 
 				PathSpecNode pathSpecExpr = new PathSpecNode( getContext(), baseVarExpr, wildcardDepthExpr,
-					recursiveFieldExpr, arrayWildcardPathExpr );
+					recursiveFieldExpr, arrayWildcardPathExpr, wildcardDepthAfterArrayExpr );
 
 				eat( Scanner.TokenType.WHERE, "expected WHERE after PATHS path" );
 

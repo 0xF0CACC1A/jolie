@@ -1519,6 +1519,7 @@ public class OOITBuilder implements UnitOLVisitor {
 			n.pathSpec().wildcardDepth(),
 			n.pathSpec().recursiveField(),
 			n.pathSpec().arrayWildcardPath(),
+			n.pathSpec().wildcardDepthAfterArray(),
 			buildExpression( n.whereExpression() ) );
 	}
 

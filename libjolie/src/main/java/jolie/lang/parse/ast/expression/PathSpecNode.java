@@ -15,23 +15,30 @@ public class PathSpecNode extends OLSyntaxNode {
 	private final int wildcardDepth;
 	private final String recursiveField;
 	private final String arrayWildcardPath;
+	private final int wildcardDepthAfterArray;
 
 	public PathSpecNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth ) {
-		this( context, baseVariable, wildcardDepth, null, null );
+		this( context, baseVariable, wildcardDepth, null, null, 0 );
 	}
 
 	public PathSpecNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth,
 		String recursiveField ) {
-		this( context, baseVariable, wildcardDepth, recursiveField, null );
+		this( context, baseVariable, wildcardDepth, recursiveField, null, 0 );
 	}
 
 	public PathSpecNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth,
 		String recursiveField, String arrayWildcardPath ) {
+		this( context, baseVariable, wildcardDepth, recursiveField, arrayWildcardPath, 0 );
+	}
+
+	public PathSpecNode( ParsingContext context, VariablePathNode baseVariable, int wildcardDepth,
+		String recursiveField, String arrayWildcardPath, int wildcardDepthAfterArray ) {
 		super( context );
 		this.baseVariable = baseVariable;
 		this.wildcardDepth = wildcardDepth;
 		this.recursiveField = recursiveField;
 		this.arrayWildcardPath = arrayWildcardPath;
+		this.wildcardDepthAfterArray = wildcardDepthAfterArray;
 	}
 
 	public VariablePathNode baseVariable() {
@@ -48,6 +55,10 @@ public class PathSpecNode extends OLSyntaxNode {
 
 	public String arrayWildcardPath() {
 		return arrayWildcardPath;
+	}
+
+	public int wildcardDepthAfterArray() {
+		return wildcardDepthAfterArray;
 	}
 
 	public boolean isRecursive() {

@@ -85,6 +85,14 @@ tests = [
     ("test_where_field_array_wildcard_objects.ol", ["data"]),
     ("test_where_field_array_wildcard_inequality.ol", ["data"]),
     ("test_where_field_array_wildcard_combined_path.ol", ["root[1]"]),
+    # Array + field wildcard in PATHS path: [*].*
+    ("test_array_field_wildcard_basic.ol", ["data[0].x", "data[0].y", "data[1].x", "data[1].y"]),
+    ("test_array_field_wildcard_multi_level.ol", ["data[0].a.x", "data[0].a.y", "data[0].b.z", "data[1].a.x", "data[1].b.z"]),
+    ("test_array_field_wildcard_filter.ol", ["data[0].y"]),
+    ("test_array_field_wildcard_string.ol", ["users[0].role", "users[2].role"]),
+    ("test_array_field_wildcard_inequality.ol", ["data[0].min", "data[1].min"]),
+    ("test_array_field_wildcard_empty.ol", ["Result count: 0"]),
+    ("test_array_field_wildcard_multi_level_filter.ol", ["data[0].a.y", "data[1].a.x"]),
 ]
 
 def run_test(test_tuple):
