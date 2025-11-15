@@ -172,14 +172,66 @@ res << paths item where $.* > 10 && $.* < 20;
 // Returns: item (both value and max satisfy the condition)
 ```
 
-## Limitations
+## Field + Array Wildcard Combination: `$.*[*]`
 
-### Not Implemented in WHERE Clause
+### Basic Syntax
+```jolie
+data.x[0] = 5;
+data.x[1] = 15;
+data.y[0] = 25;
+data.y[1] = 35;
 
-**Field + Array Combination: `$.*[*]`**
-- Syntax: `paths data where $.*[*] == value`
-- Would require iterating both fields AND array elements
-- Deferred to future implementation
+res << paths data where $.*[*] > 20;
+// Returns: data (because data.y[0] and data.y[1] > 20)
+```
+
+### Multi-level: `$.*.items[*].price`
+```jolie
+data.store1.items[0].price = 10;
+data.store1.items[1].price = 50;
+data.store2.items[0].price = 100;
+
+res << paths data where $.*.items[*].price > 75;
+// Returns: data (because data.store2.items[0].price > 75)
+```
+
+### Deep Nesting: `$.*.*[*]`
+```jolie
+root.branch1.leaves[0] = 10;
+root.branch1.leaves[1] = 20;
+root.branch2.leaves[0] = 50;
+
+res << paths root where $.*.*[*] > 25;
+// Returns: root (because root.branch2.leaves[0] > 25)
+```
+
+### With Boolean Operators
+```jolie
+data.a[0] = 5;
+data.a[1] = 15;
+data.a[2] = 25;
+
+res << paths data where $.*[*] > 20 && $.*[*] < 10;
+// Returns: data (has elements both > 20 AND < 10)
+```
+
+### Combined with Path Wildcards
+```jolie
+root[0].a[0] = 10;
+root[1].a[0] = 200;
+
+res << paths root[*] where $.*[*] > 150;
+// Returns: root[1] (root[1].a[0] > 150)
+```
+
+## Implementation Notes
+
+The `$.*[*]` combination works through nested iteration:
+1. **Field wildcard (`.*`)**: Iterates over all child fields using `children()` map
+2. **Array wildcard (`[*]`)**: For each field, iterates over array elements
+3. **Existential semantics**: Returns true if ANY field's ANY element matches
+
+The implementation is fully iterative (no recursion) and prevents vivification by only traversing existing structure.
 
 ### Already Working (Not Changed)
 
@@ -197,9 +249,8 @@ res << paths item where $.* > 10 && $.* < 20;
 ## Future Work
 
 Potential extensions:
-- `$.*[*]` - Field wildcard + array wildcard combination
-- `$.*[*].*` - Continue traversing after array elements
-- Universal quantification (`$.all.*` or similar syntax)
+- `$.*[*].*` - Continue traversing after array elements (e.g., `$.*[*].field`)
+- Universal quantification (`$.all.*` or similar syntax for "ALL must match" instead of "ANY must match")
 
 ## Integration with Existing Features
 

@@ -73,6 +73,18 @@ tests = [
     ("test_where_field_wildcard_nested.ol", ["store.items[2]"]),
     ("test_where_field_wildcard_boolean_and.ol", ["item"]),
     ("test_where_field_wildcard_deep.ol", ["root"]),
+    # Field + array wildcard in WHERE clause: $.*[*]
+    ("test_where_field_array_wildcard_basic.ol", ["data"]),
+    ("test_where_field_array_wildcard_multi_level.ol", ["data"]),
+    ("test_where_field_array_wildcard_deep_nesting.ol", ["root"]),
+    ("test_where_field_array_wildcard_string.ol", ["data"]),
+    ("test_where_field_array_wildcard_negation.ol", ["data"]),
+    ("test_where_field_array_wildcard_boolean_and.ol", ["data"]),
+    ("test_where_field_array_wildcard_boolean_or.ol", ["data"]),
+    ("test_where_field_array_wildcard_empty_arrays.ol", ["data"]),
+    ("test_where_field_array_wildcard_objects.ol", ["data"]),
+    ("test_where_field_array_wildcard_inequality.ol", ["data"]),
+    ("test_where_field_array_wildcard_combined_path.ol", ["root[1]"]),
 ]
 
 def run_test(test_tuple):
